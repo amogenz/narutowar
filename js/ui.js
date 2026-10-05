@@ -24,6 +24,8 @@ lock:'<svg '+_svgW+'><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M
 check:'<svg '+_svgW+'><path d="m5 12 5 5 9-11"/></svg>',
 coin:'<svg '+_svgW+'><circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="3.6" ry="5.2"/></svg>',
 back:'<svg '+_svgW+'><path d="m14 6-6 6 6 6"/></svg>',
+pause:'<svg '+_svgW+'><path d="M9 5v14M15 5v14" stroke-width="3.6"/></svg>',
+fs:'<svg '+_svgW+'><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></svg>',
 };
 
 /* ---------- koin & unlock (localStorage) ---------- */
@@ -194,12 +196,20 @@ window.addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
   if(k===' '){ // SPASI = ATTACK (manual)
     e.preventDefault();
-    if(!$('hud').classList.contains('hidden')) NWGame.playerAttack();
+    if(!$('hud').classList.contains('hidden')&&!isPaused()) NWGame.playerAttack();
+    return;
+  }
+  /* Esc / P = buka-tutup menu pause (hanya dalam battle) */
+  if(k==='escape'||k==='p'){
+    if(!e.repeat&&!$('hud').classList.contains('hidden')){
+      e.preventDefault();setPaused(!isPaused());uiClick();
+    }
     return;
   }
   keys[k]=true;
   if(['arrowup','arrowdown','arrowleft','arrowright'].includes(k))e.preventDefault();
   if($('hud').classList.contains('hidden'))return;
+  if(isPaused())return; // input tempur mati total saat pause
   if(k==='z'||k==='j')NWGame.playerCast(0);
   if(k==='x'||k==='k')NWGame.playerCast(1);
   if(k==='c'||k==='l')NWGame.playerCast(2);
@@ -313,9 +323,10 @@ window.addEventListener('orientationchange',()=>setTimeout(updateLayoutMode,300)
  * Promise rejection (browser menolak / butuh fullscreen) diabaikan diam-diam:
  * status dikembalikan agar ikon tetap jujur. */
 let orientLocked=false;
+/* v15: semua tombol orientasi (menu + HUD + pause) dicat sekaligus via [data-orient] */
 function paintOrientBtns(){
   const ic=orientLocked?ICON.lock:ICON.rotate;
-  ['btn-orient','btn-orient-title'].forEach(id=>{const el=$(id);if(el)el.innerHTML=ic;});
+  document.querySelectorAll('[data-orient]').forEach(el=>{el.innerHTML=ic;});
 }
 function setOrientLock(want){
   orientLocked=want;
@@ -335,14 +346,72 @@ function setupOrientToggle(){
   /* pulihkan tampilan preferensi tersimpan — TANPA auto-lock */
   try{orientLocked=localStorage.getItem('nw_orient')==='landscape';}catch(e){orientLocked=false;}
   paintOrientBtns();
-  ['btn-orient','btn-orient-title'].forEach(id=>{
-    const el=$(id);if(!el)return;
+  document.querySelectorAll('[data-orient]').forEach(el=>{
     onTap(el,()=>{
-      NWAudio.init();NWAudio.click();
+      uiClick();
       setOrientLock(!orientLocked);
       toast(orientLocked?'Orientasi dikunci landscape':'Kunci orientasi dilepas');
     });
   });
+}
+
+/* ---------- suara: v15 class-based — semua tombol [data-sound] serentak ---------- */
+function paintSoundBtns(){
+  const ic=ICON[NWAudio.enabled?'volOn':'volOff'];
+  document.querySelectorAll('[data-sound]').forEach(el=>{el.innerHTML=ic;});
+}
+function toggleSound(){
+  NWAudio.enabled=!NWAudio.enabled;
+  paintSoundBtns();
+}
+/* klik UI yang tetap berbunyi walau SFX game di-mute saat pause */
+function uiClick(){
+  const p=NWAudio._paused;NWAudio._paused=false;
+  NWAudio.init();NWAudio.click();NWAudio._paused=p;
+}
+/* fullscreen: opsi di HUD + menu pause */
+async function toggleFullscreen(){
+  try{
+    if(document.fullscreenElement)await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  }catch(e){toast('Browser tidak mendukung layar penuh');}
+}
+
+/* ---------- MENU PAUSE (v15) ----------
+ * setPaused(true): NWGame.setPaused -> loop() melewati update/render total
+ * (game-time berhenti: timer tak maju, musuh tak bergerak, cooldown diam),
+ * SFX game di-mute via NWAudio._paused, overlay tampil (fade/scale CSS).
+ * setPaused(false): lanjut — G.last sudah disegarkan tiap frame saat pause,
+ * jadi tidak ada lompatan dt. */
+let paused=false;
+function isPaused(){return paused;}
+function setPaused(v){
+  v=!!v;
+  if(v){
+    /* pause hanya bermakna dalam battle (HUD tampil) */
+    try{if($('hud').classList.contains('hidden'))return;}catch(e){return;}
+  }
+  if(v===paused){
+    const ov=$('pause-overlay');if(ov)ov.classList.toggle('show',v);
+    return;
+  }
+  paused=v;
+  try{NWGame.setPaused(v);}catch(e){}
+  NWAudio._paused=v;
+  const ov=$('pause-overlay');
+  if(ov)ov.classList.toggle('show',v);
+}
+function restartBattle(){
+  /* MULAI ULANG: tutup pause, jalankan ulang match dengan konfigurasi sama.
+     Pip ronde sesi (rwP/rwE) TIDAK direset — itu skor sesi, bukan match. */
+  setPaused(false);
+  launchBattle();
+}
+function quitToMenu(){
+  setPaused(false);
+  NWGame.stop();NWGame.clearView();rwP=0;rwE=0;
+  $('hud').classList.add('hidden');
+  show('screen-title');
 }
 
 /* ---------- HUD ---------- */
@@ -464,12 +533,12 @@ function bindUI(){
     if(e.target.closest&&e.target.closest('.btn,.skbtn,.char-card,.mode-card,.arena-card,.iconbtn'))
       NWAudio.hover();
   });
-  const muteToggle=()=>{
-    NWAudio.enabled=!NWAudio.enabled;
-    const ic=ICON[NWAudio.enabled?'volOn':'volOff'];
-    $('btn-sound').innerHTML=ic;$('btn-mute-title').innerHTML=ic;
-  };
-  onTap($('btn-mute-title'),()=>{NWAudio.init();muteToggle();});
+  /* v15: tombol suara & fullscreen class-based (semua layar + HUD + pause) */
+  paintSoundBtns();
+  document.querySelectorAll('[data-sound]').forEach(el=>
+    onTap(el,()=>{NWAudio.init();uiClick();toggleSound();}));
+  document.querySelectorAll('[data-fs]').forEach(el=>
+    onTap(el,()=>{uiClick();toggleFullscreen();}));
   // mode
   document.querySelectorAll('.mode-card').forEach(c=>onTap(c,()=>{
     NWAudio.init();NWAudio.click();mode=c.dataset.mode;
@@ -499,21 +568,19 @@ function bindUI(){
   onTap($('btn-to-arena2'),()=>{NWAudio.click();show('screen-arena');});
   onTap($('btn-back-arena'),()=>{NWAudio.click();show(mode==='versus'?'screen-enemy':'screen-select');});
   onTap($('btn-fight'),()=>{NWAudio.click();startBattle();});
-  onTap($('btn-rematch'),()=>{NWAudio.click();battleStarting=false;startBattle();});
-  onTap($('btn-tomenu'),()=>{NWAudio.click();NWGame.stop();NWGame.clearView();rwP=0;rwE=0;$('hud').classList.add('hidden');show('screen-title');});
-  onTap($('btn-quit'),()=>{NWAudio.click();NWGame.stop();NWGame.clearView();rwP=0;rwE=0;$('hud').classList.add('hidden');show('screen-title');});
-  onTap($('btn-sound'),()=>{NWAudio.init();muteToggle();});
+  onTap($('btn-rematch'),()=>{uiClick();battleStarting=false;startBattle();});
+  onTap($('btn-tomenu'),()=>{uiClick();quitToMenu();});
+  onTap($('btn-quit'),()=>{uiClick();quitToMenu();});
+  /* pause dalam game (tombol HUD + keyboard Esc/P) */
+  onTap($('btn-pause'),()=>{uiClick();setPaused(true);});
+  onTap($('btn-resume'),()=>{setPaused(false);uiClick();});
+  onTap($('btn-restart'),()=>{uiClick();restartBattle();});
+  onTap($('btn-pause-menu'),()=>{uiClick();quitToMenu();});
   /* catatan: tombol paksa-landscape & kunci-orientasi DIHAPUS (aturan Bos:
      jangan paksa landscape). Fullscreen tetap tersedia sebagai opsi. */
-  onTap($('btn-fs'),async()=>{
-    NWAudio.click();
-    try{
-      if(document.fullscreenElement)await document.exitFullscreen();
-      else await document.documentElement.requestFullscreen();
-    }catch(e){toast('Browser tidak mendukung layar penuh');}
-  });
   document.addEventListener('fullscreenchange',()=>{try{NWGame.resize();}catch(e){}});
   NWGame.onEnd((win,stats)=>{
+    setPaused(false); // pengaman: overlay pause tak boleh nyangkut di layar akhir
     if(win)rwP++;else rwE++;
     renderPips();
     store.coins=store.coins+(stats?stats.coins:0);
@@ -531,6 +598,17 @@ function insertCoinBar(screenId){
   const d=document.createElement('div');d.className='coinbar';d.innerHTML=ICON.coin+'KOIN: 0';
   panel.insertBefore(d,panel.firstChild);
 }
+/* inti mulai battle — dipakai startBattle (dari menu) & restartBattle (dari pause) */
+function launchBattle(){
+  show(null);
+  $('hud').classList.remove('hidden');
+  document.querySelector('.hud-btns').style.display='block';
+  setSkillLabels(pChar);
+  NWGame.setInput(0,0);
+  setPaused(false);
+  NWGame.start({mode,arena,difficulty,player:pChar,enemy:eChar||pChar});
+  setupBattleHUD();
+}
 function startBattle(){
   if(battleStarting)return; // cegah double-start (bug QA: klik ganda)
   battleStarting=true;
@@ -538,13 +616,7 @@ function startBattle(){
   const oldTxt=fb.innerHTML;fb.disabled=true;fb.innerHTML='MEMUAT ARENA...';
   /* beri browser satu frame untuk menggambar feedback sebelum kerja berat */
   setTimeout(()=>{
-    show(null);
-    $('hud').classList.remove('hidden');
-    document.querySelector('.hud-btns').style.display='block';
-    setSkillLabels(pChar);
-    NWGame.setInput(0,0);
-    NWGame.start({mode,arena,difficulty,player:pChar,enemy:eChar||pChar});
-    setupBattleHUD();
+    launchBattle();
     fb.disabled=false;fb.innerHTML=oldTxt;
     battleStarting=false;
   },60);
@@ -570,5 +642,5 @@ function setupBattleHUD(){
   renderPips();
 }
 
-window.NWUI={tickHUD,bindUI,boot};
+window.NWUI={tickHUD,bindUI,boot,isPaused,setPaused};
 })();
