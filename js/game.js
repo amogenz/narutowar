@@ -21,7 +21,7 @@ const ARENAS={
 const G={
   canvas:null,ctx:null,layers:null,arena:'konoha',
   mode:'versus',difficulty:'normal',
-  running:false,over:false,winner:false,
+  running:false,paused:false,over:false,winner:false,
   time:0,last:0,acc:0,cam:0,shake:0,dpr:1,hitstop:0,koCd:0,
   fighters:[],player:null,minions:[],towers:[],bases:[],
   projs:[],parts:[],zones:[],texts:[],delayed:[],flashes:[],
@@ -166,12 +166,20 @@ function buildLayers(){
     if(!WA.midCv)WA.midCv=combine2(WA.mid_a,WA.mid_b);
     drawCover(mid.getContext('2d'),WA.midCv,WORLD_W+792); // 0.55x: geser maks 792px
   }else buildProcLayers(A,sky,far,mid);
-  // DEPAN (1x): tanah + jalur + desa + dekorasi LAB (tetap prosedural)
+  // DEPAN (1x): tanah gambar (v15) / gradient fallback + jalur + dekorasi
   const night=G.arena==='akatsuki';
   let g=gnd.getContext('2d');
-  const gr=g.createLinearGradient(0,300,0,H);
-  gr.addColorStop(0,A.ground[0]);gr.addColorStop(1,A.ground[1]);
-  g.fillStyle=gr;g.fillRect(0,300,WORLD_W,H-300);
+  const gg=WA&&WA.ground,ggw=gg?((gg.naturalWidth||gg.width)||0):0;
+  if(ggw>0){
+    /* ground PNG 960x150 tileable horizontal di y=300; sisa bawah diisi tone gelap */
+    const gh=gg.naturalHeight||gg.height||150;
+    for(let x=0;x<WORLD_W;x+=ggw)g.drawImage(gg,x,300);
+    g.fillStyle=A.ground[1];g.fillRect(0,300+gh,WORLD_W,H-300-gh);
+  }else{
+    const gr=g.createLinearGradient(0,300,0,H);
+    gr.addColorStop(0,A.ground[0]);gr.addColorStop(1,A.ground[1]);
+    g.fillStyle=gr;g.fillRect(0,300,WORLD_W,H-300);
+  }
   g.fillStyle=night?'rgba(90,60,90,.5)':'rgba(160,120,70,.55)';
   g.fillRect(0,LANE_TOP,WORLD_W,LANE_BOT-LANE_TOP);
   g.fillStyle='rgba(0,0,0,.12)';
@@ -266,8 +274,17 @@ function preloadWorld(){
     for(const part of WORLD_PARTS)
       jobs.push(one(a+'_'+part+'.jpg',false).then(im=>{Wd.arena[a][part]=im;}).catch(()=>{}));
   }
-  for(const n of ['lantern','banner_lab','sakura_tree'])
+  for(const n of ['lantern','banner_lab','sakura_tree',
+               'konoha_torii','konoha_sakura_bush',
+               'lembah_boulder','lembah_grass',
+               'akatsuki_stalagmite','akatsuki_rockpile'])
     jobs.push(one(n+'.png',true).then(c=>{Wd.decor[n]=c;}).catch(()=>{}));
+  for(const a of Object.keys(AMBIENT_STRIP)){
+    jobs.push(one(a+'_ground.png',false).then(im=>{Wd.arena[a].ground=im;}).catch(()=>{}));
+  }
+  Wd.npc=Wd.npc||{};
+  for(const n of ['npc_villager','npc_guard','npc_kid'])
+    jobs.push(one('npc/'+n+'.png',true).then(c=>{Wd.npc[n]=c;}).catch(()=>{}));
   for(const n of ['petal','firefly','sparkle','cloud'])
     jobs.push(one(n+'.png',true).then(c=>{Wd.amb[n]=c;}).catch(()=>{}));
   for(const n of ['tower_ally','tower_ally_broken','tower_foe','tower_foe_broken',
@@ -356,6 +373,17 @@ function decorateGround(){
     putK(D.sakura_tree,236,LANE_TOP-104,100,98);
     /* kanan digeser 2164->2040 agar tak tumpuk baliho Zetsu */
     putK(D.sakura_tree,2040,LANE_TOP-104,100,98);
+  }
+  /* v15: dekorasi khas per arena — di atas lane (y bawah ~184), luar area aksi */
+  if(G.arena==='konoha'){
+    putK(D.konoha_torii,700,184-106,120,106);
+    putK(D.konoha_sakura_bush,1700,184-92,110,92);
+  }else if(G.arena==='lembah'){
+    putK(D.lembah_boulder,500,184-83,110,83);
+    putK(D.lembah_grass,1900,184-80,80,80);
+  }else if(G.arena==='akatsuki'){
+    putK(D.akatsuki_stalagmite,600,184-102,80,102);
+    putK(D.akatsuki_rockpile,1800,184-80,90,80);
   }
 }
 
@@ -1084,6 +1112,22 @@ function render(){
   g.drawImage(L.mid,-Math.round(G.cam*0.55),0);
   g.save();g.translate(-cam,Math.round(-sy));
   g.drawImage(L.gnd,0,0);
+  /* v15: NPC anime di tepi base (kaki di y=180, di atas lane) — sprite +
+   * animasi ringan, tanpa alokasi per frame */
+  const _npc=G.world.npc;
+  if(_npc){
+    const f3=Math.floor(G.time*2.2)%3;
+    const gt=Math.floor(G.time*1.5)%6, gf=gt<4?(gt&1):gt-2;
+    const nv=_npc.npc_villager;
+    if(nv&&nv.width){
+      g.drawImage(nv,f3*64,0,64,96,110-32,180-96,64,96);      // warga pria
+      g.drawImage(nv,f3*64,96,64,96,190-32,180-96,64,96);     // warga wanita
+    }
+    const ng=_npc.npc_guard;
+    if(ng&&ng.width)g.drawImage(ng,gf*64,0,64,96,2290-32,180-96,64,96); // penjaga
+    const nk=_npc.npc_kid;
+    if(nk&&nk.width)g.drawImage(nk,f3*64,0,64,96,2200-32,180-96,64,96); // anak lompat
+  }
   // zona chakra tengah
   const czx=WORLD_W/2,czy=(LANE_TOP+LANE_BOT)/2;
   g.strokeStyle='rgba(46,168,255,'+(0.5+0.25*Math.sin(G.time*5))+')';
@@ -1326,6 +1370,11 @@ function perfSample(dt){
 function loop(ts){
   if(!G.running)return;
   requestAnimationFrame(loop);
+  /* PAUSE (v15): game-time BENAR-BENAR berhenti — update(), render(), dan
+     tickHUD() dilewati total: timer tak maju, musuh tak bergerak, cooldown
+     tak jalan. G.last disegarkan tiap frame agar resume tanpa lompatan dt.
+     rAF tetap dijadwalkan supaya rantai loop tidak putus. */
+  if(G.paused){G.last=ts;return;}
   let dt=(ts-G.last)/1000;
   G.last=ts;
   if(!(dt>0))dt=STEP;else if(dt>0.25)dt=0.25; // guard tab-switch / hitch ekstrem
@@ -1383,7 +1432,7 @@ function start(cfg){
   G.hitstop=0;G.koCd=0;
   G.perf={ema:16.7,level:0,bad:0,good:0}; // reset degradasi adaptif tiap battle
   G.cam=0;G.kills=[0,0];G.coins=0;G.banner=null;G.bannerT=0;
-  G.running=true;G.last=performance.now();
+  G.paused=false;G.running=true;G.last=performance.now();
   // genta perang
   NWAudio.drum();
   /* banner FIGHT! via wall-clock (bukan game-time) agar selalu muncul
@@ -1412,11 +1461,14 @@ window.NWGame={
   setInput(x,y){G.input.x=x;G.input.y=y;},
   resize(){resize();},
   _fitView:fitView,
-  _tick(dt){IN.x=G.input.x;IN.y=G.input.y;update(dt);}, // hook uji headless (Node)
+  _tick(dt){if(G.paused)return;IN.x=G.input.x;IN.y=G.input.y;update(dt);}, // hook uji headless (Node)
   _render(){render();}, // hook uji headless: render satu frame (untuk perf-audit)
   onEnd(fn){G.onEnd=fn;},
   getState(){return G;},
   stop(){G.running=false;},
+  /* v15: pause — loop() melewati update/render total saat true */
+  setPaused(v){G.paused=!!v;},
+  isPaused(){return !!G.paused;},
   /* bersihkan layar saat keluar ke menu (temuan QA: battlefield lama
      masih terlihat di belakang judul) */
   clearView(){
