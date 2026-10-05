@@ -11,13 +11,29 @@ let ghostP=1,ghostE=1,holdP=0,holdE=0;
 /* lawan yang sudah diungkap siluetnya di layar PILIH LAWAN */
 const revealedEnemy=new Set();
 
+/* ---------- SET IKON SVG (ANTI EMOJI — aturan Bos 2026-10-05, permanen) ----------
+ * Seluruh ikon UI wajib SVG satu gaya: viewBox 24, fill none,
+ * stroke currentColor 2.4, round caps/joins — mengikuti design system. */
+const _svgW='viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"';
+const ICON={
+volOn:'<svg '+_svgW+'><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg>',
+volOff:'<svg '+_svgW+'><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="m16 9 5 5M21 9l-5 5"/></svg>',
+close:'<svg '+_svgW+'><path d="M6 6l12 12M18 6 6 18"/></svg>',
+rotate:'<svg '+_svgW+'><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg>',
+lock:'<svg '+_svgW+'><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+check:'<svg '+_svgW+'><path d="m5 12 5 5 9-11"/></svg>',
+coin:'<svg '+_svgW+'><circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="3.6" ry="5.2"/></svg>',
+back:'<svg '+_svgW+'><path d="m14 6-6 6 6 6"/></svg>',
+};
+
 /* ---------- koin & unlock (localStorage) ---------- */
 const store={
   get coins(){return parseInt(localStorage.getItem('nw_coins')||'0',10);},
   set coins(v){localStorage.setItem('nw_coins',String(v));},
   get unlocked(){try{return JSON.parse(localStorage.getItem('nw_unlocked')||'["naruto"]');}catch(e){return['naruto'];}},
   set unlocked(v){localStorage.setItem('nw_unlocked',JSON.stringify(v));},
-  isOpen(id){return this.unlocked.includes(id);},
+  /* Naruto = karakter awal: SELALU terbuka (anti gembok nyasar dari save versi lama) */
+  isOpen(id){return id==='naruto'||this.unlocked.includes(id);},
   unlock(id){
     const u=this.unlocked;if(!u.includes(id)){u.push(id);this.unlocked=u;}
   }
@@ -60,27 +76,34 @@ function onTap(el,fn){
 }
 
 /* ---------- kartu karakter ---------- */
-/* opts.mystery: tampil sebagai siluet "???" sampai diungkap (layar PILIH LAWAN) */
+/* opts.mystery: tampil sebagai siluet "???" sampai diungkap (layar PILIH LAWAN).
+ * Kartu RAHASIA (secret) yang masih TERKUNCI juga disamarkan: nama "???",
+ * jurus "???", portrait siluet — anti-spoiler sampai terbuka. */
 function charCard(ch,onPick,opts){
   opts=opts||{};
   const mystery=!!opts.mystery&&!revealedEnemy.has(ch.id);
   const d=document.createElement('div');
   const open=store.isOpen(ch.id);
+  const secretLocked=!!ch.secret&&!open;
+  const hidden=mystery||secretLocked;
   d.className='char-card'+(ch.secret?' secret':'')+(open?'':' locked')+(mystery?' mystery':'');
   d.dataset.id=ch.id;
-  d.title=open?ch.name+' — '+ch.title:'Terkunci — butuh '+ch.cost+' koin';
+  d.title=secretLocked?'Karakter RAHASIA — butuh '+ch.cost+' koin untuk membuka'
+    :(open?ch.name+' — '+ch.title:'Terkunci — butuh '+ch.cost+' koin');
   const sk=ch.skills.map(s=>s.name).join(' • ');
   const face=ch.img
-    ?`<img class="char-img${mystery?' sil':''}" src="${ch.img}" alt="${mystery?'???':ch.name}">`
+    ?`<img class="char-img${hidden?' sil':''}" src="${ch.img}" alt="${hidden?'???':ch.name}">`
     :`<div class="char-dot" style="background:${ch.body};border-color:${ch.accent}"></div>`;
   const tag=ch.secret?'<span class="secrettag">RAHASIA</span> ':'';
-  const lockVeil=open?'':`<div class="lockveil"><span class="lockicon">🔒</span></div>`;
-  const lockTag=open?'':`<br><span class="locktag">🔒 BUTUH ${ch.cost} KOIN</span>`;
-  const dName=mystery?'???':ch.name;
-  const dTitle=mystery?'Lawan misterius':ch.title;
-  const dSk=mystery?'??? • ??? • ???':sk;
-  const dUlt=mystery?'ULT: ???':'ULT: '+ch.ult.name;
-  d.innerHTML=`${face}${lockVeil}<h3>${tag}${dName}</h3><p><b>${dTitle}</b><br>${dSk}<br><span class="ult">${dUlt}</span>${lockTag}</p>`;
+  const lockVeil=open?'':`<div class="lockveil"><span class="lockicon">${ICON.lock}</span></div>`;
+  const lockTag=open?'':`<br><span class="locktag">${ICON.lock}BUTUH ${ch.cost} KOIN</span>`;
+  const dName=mystery?'???':(secretLocked?'???':ch.name);
+  const dTitle=mystery?'Lawan misterius':(secretLocked?'Karakter rahasia':ch.title);
+  const dSk=hidden?'??? • ??? • ???':sk;
+  const dUlt=hidden?'ULT: ???':'ULT: '+ch.ult.name;
+  /* .card-detail = blok judul/skill/ult (disembunyikan di mode kompak HP);
+     .locktag (harga) di luar <p> agar tetap tampil sebagai "nama + harga" */
+  d.innerHTML=`${face}${lockVeil}<h3>${tag}${dName}</h3><p class="card-detail"><b>${dTitle}</b><br>${dSk}<br><span class="ult">${dUlt}</span></p>${lockTag}`;
   onTap(d,()=>{
     NWAudio.init();NWAudio.click();
     if(mystery){
@@ -98,7 +121,7 @@ function charCard(ch,onPick,opts){
         toast(ch.name+' terbuka! Selamat bertarung.');
       }else{
         d.classList.remove('shake');void d.offsetWidth;d.classList.add('shake');
-        toast('🔒 '+ch.name+' terkunci — butuh '+ch.cost+' koin (kamu: '+store.coins+').');
+        toast(ch.name+' terkunci — butuh '+ch.cost+' koin (kamu: '+store.coins+').');
       }
       return;
     }
@@ -107,7 +130,7 @@ function charCard(ch,onPick,opts){
   return d;
 }
 function updateCoinBar(){
-  document.querySelectorAll('.coinbar').forEach(el=>el.textContent='KOIN: '+store.coins);
+  document.querySelectorAll('.coinbar').forEach(el=>{el.innerHTML=ICON.coin+'KOIN: '+store.coins;});
 }
 function buildCharGrid(){
   const pg=$('char-grid');pg.innerHTML='';
@@ -299,9 +322,17 @@ function updateOrientBtn(){
 }
 async function tryLandscape(){ await lockLandscape(); }
 function checkOrientation(){
+  const endActive=$('screen-end').classList.contains('active');
   const portrait=window.innerHeight>window.innerWidth&&!document.body.classList.contains('forcerotate');
-  $('rotate-overlay').classList.toggle('hidden',!portrait);
+  /* layar AKHIR tak boleh ditutup overlay paksa-landscape: tombol MENU UTAMA
+     harus selalu bisa diklik (perbaikan bug QA: pengguna harus reload) */
+  $('rotate-overlay').classList.toggle('hidden',!portrait||endActive);
   if(!portrait)document.body.classList.remove('forcerotate');
+  /* mode kompak menu: HP miring pendek (<=470px) ATAU paksa-rotasi.
+     Saat forcerotate, viewport CSS tetap 360x740 (portrait) sehingga media query
+     tak bisa diandalkan — class body.compactland selalu bisa. */
+  const compactLand=window.innerHeight<=470||document.body.classList.contains('forcerotate');
+  document.body.classList.toggle('compactland',compactLand);
   updateOrientBtn();
 }
 window.addEventListener('resize',checkOrientation);
@@ -333,7 +364,7 @@ function tickHUD(){
   $('hud-pchakra').style.width=(100*p.chakra/p.maxchakra)+'%';
   $('hud-timer').textContent=fmtT(G.time);
   $('hud-kills').textContent='KILL '+G.kills[0];
-  $('hud-coins').textContent='KOIN '+G.coins;
+  $('hud-coins').innerHTML=ICON.coin+'KOIN '+G.coins;
   const foe=G.fighters.find(h=>h.team===1&&h.kind==='hero');
   if(foe){
     const er=foe.hp/foe.maxhp;
@@ -409,8 +440,8 @@ function bindUI(){
   });
   const muteToggle=()=>{
     NWAudio.enabled=!NWAudio.enabled;
-    const t=NWAudio.enabled?'🔊':'🔇';
-    $('btn-sound').textContent=t;$('btn-mute-title').textContent=t;
+    const ic=ICON[NWAudio.enabled?'volOn':'volOff'];
+    $('btn-sound').innerHTML=ic;$('btn-mute-title').innerHTML=ic;
   };
   onTap($('btn-mute-title'),()=>{NWAudio.init();muteToggle();});
   // mode
@@ -419,10 +450,15 @@ function bindUI(){
     document.querySelectorAll('.mode-card').forEach(x=>x.classList.remove('sel'));
     c.classList.add('sel');$('btn-to-char').disabled=false;
   }));
+  /* pilihan kesulitan: state aktif jelas (emas + ceklis SVG + aria-pressed + toast),
+     tersimpan ke `difficulty` lalu diteruskan ke NWGame.start saat bertarung */
   document.querySelectorAll('[data-diff]').forEach(b=>onTap(b,()=>{
-    NWAudio.click();difficulty=b.dataset.diff;
-    document.querySelectorAll('[data-diff]').forEach(x=>x.classList.remove('sel'));
-    b.classList.add('sel');
+    NWAudio.init();NWAudio.click();difficulty=b.dataset.diff;
+    document.querySelectorAll('[data-diff]').forEach(x=>{
+      x.classList.remove('sel');x.setAttribute('aria-pressed','false');
+    });
+    b.classList.add('sel');b.setAttribute('aria-pressed','true');
+    toast('Kesulitan: '+b.textContent.trim());
   }));
   onTap($('btn-start'),()=>{NWAudio.init();NWAudio.click();show('screen-mode');});
   onTap($('btn-back-mode'),()=>{NWAudio.click();show('screen-title');});
@@ -452,6 +488,7 @@ function bindUI(){
       throw 0;
     }catch(e){
       document.body.classList.add('forcerotate');
+      document.body.classList.add('compactland'); // boks rotasi = layout landscape pendek
       window.NWForceRotate=true;
       $('rotate-overlay').classList.add('hidden');
       updateOrientBtn();
@@ -480,12 +517,15 @@ function bindUI(){
     $('end-title').style.color=win?'#ffd23e':'#ff5e5e';
     const c=stats?stats.coins:0,k=stats?stats.kills:0;
     $('end-sub').textContent=(win?'Base musuh hancur! ':'')+k+' kill • +'+c+' koin (total: '+store.coins+')';
+    /* game selesai: paksa-landscape tak lagi relevan — pastikan tak ada overlay
+       yang menutupi tombol MENU UTAMA / MAIN LAGI */
+    $('rotate-overlay').classList.add('hidden');
     show('screen-end');
   });
 }
 function insertCoinBar(screenId){
   const panel=document.querySelector('#'+screenId+' .panel');
-  const d=document.createElement('div');d.className='coinbar';d.textContent='KOIN: 0';
+  const d=document.createElement('div');d.className='coinbar';d.innerHTML=ICON.coin+'KOIN: 0';
   panel.insertBefore(d,panel.firstChild);
 }
 function startBattle(){
