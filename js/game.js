@@ -28,6 +28,8 @@ const G={
   partPool:[],projPool:[],
   waveT:0,survT:0,survWave:0,input:{x:0,y:0},
   kills:[0,0],coins:0,banner:null,bannerT:0,
+  /* F. scoreboard per petarung per match (dibaca UI lead via NWGame.scoreboard()) */
+  score:[],
   onEnd:null,imgs:{},ambientT:0,
   /* kualitas adaptif: 0=penuh, 1=hemat, 2=minimal (diatur perfSample di loop) */
   perf:{ema:16.7,level:0,bad:0,good:0},
@@ -171,10 +173,11 @@ function buildLayers(){
   let g=gnd.getContext('2d');
   const gg=WA&&WA.ground,ggw=gg?((gg.naturalWidth||gg.width)||0):0;
   if(ggw>0){
-    /* ground PNG 960x150 tileable horizontal di y=300; sisa bawah diisi tone gelap */
+    /* C. ground PNG 960x150 tileable horizontal di y=300; area bawah diisi
+     * tone YANG DISAMPEL dari tile (bukan flat color generik) */
     const gh=gg.naturalHeight||gg.height||150;
     for(let x=0;x<WORLD_W;x+=ggw)g.drawImage(gg,x,300);
-    g.fillStyle=A.ground[1];g.fillRect(0,300+gh,WORLD_W,H-300-gh);
+    g.fillStyle=groundTone(gg)||A.ground[1];g.fillRect(0,300+gh,WORLD_W,H-300-gh);
   }else{
     const gr=g.createLinearGradient(0,300,0,H);
     gr.addColorStop(0,A.ground[0]);gr.addColorStop(1,A.ground[1]);
@@ -263,6 +266,25 @@ function drawCover(g,img,dw){
   if(!sw||!sh)return;
   g.drawImage(img,0,0,sw,sh,0,0,dw,sh*dw/sw);
 }
+/* C. sampel tone dari 40px terbawah tile ground (SEKALI per file, di-cache) —
+ * dipakai sebagai isi area bawah tile agar menyatu dgn tekstur.
+ * Build-time saja (di buildLayers), bukan hot loop. */
+const _toneCache={};
+function groundTone(img){
+  try{
+    const key=img.src||('w'+(img.naturalWidth||img.width));
+    if(_toneCache[key])return _toneCache[key];
+    const sw=img.naturalWidth||img.width,sh=img.naturalHeight||img.height;
+    if(!sw||!sh||sh<50)return null;
+    const c=mkCanvas(1,1),g2=c.getContext('2d');
+    if(!g2)return null;
+    g2.drawImage(img,0,sh-40,sw,40,0,0,1,1);
+    const d=g2.getImageData(0,0,1,1).data;
+    const col='rgb('+(d[0]|0)+','+(d[1]|0)+','+(d[2]|0)+')';
+    _toneCache[key]=col;
+    return col;
+  }catch(e){return null;}
+}
 function preloadWorld(){
   if(G.world.pre)return G.world.pre;
   const Wd=G.world;
@@ -280,20 +302,37 @@ function preloadWorld(){
                'akatsuki_stalagmite','akatsuki_rockpile'])
     jobs.push(one(n+'.png',true).then(c=>{Wd.decor[n]=c;}).catch(()=>{}));
   for(const a of Object.keys(AMBIENT_STRIP)){
-    jobs.push(one(a+'_ground.png',false).then(im=>{Wd.arena[a].ground=im;}).catch(()=>{}));
+    /* v15: ground JPG baru (tileable, bertekstur) prioritas; fallback PNG lama */
+    jobs.push(one(a+'_ground.jpg',false).then(im=>im||one(a+'_ground.png',false))
+      .then(im=>{Wd.arena[a].ground=im;}).catch(()=>{}));
   }
   Wd.npc=Wd.npc||{};
-  for(const n of ['npc_villager','npc_guard','npc_kid'])
-    jobs.push(one('npc/'+n+'.png',true).then(c=>{Wd.npc[n]=c;}).catch(()=>{}));
+  /* v15: NPC strip baru (assets/npc/, 4 frame idle anime) prioritas; fallback lama */
+  const _npcJobs=[['npc_villager','../npc/villager.png','npc/npc_villager.png'],
+                  ['npc_guard','../npc/guard.png','npc/npc_guard.png'],
+                  ['npc_kid',null,'npc/npc_kid.png']];
+  for(const _nj of _npcJobs){
+    const _key=_nj[0],_neu=_nj[1],_lama=_nj[2];
+    jobs.push((_neu?one(_neu,true).then(im=>im||one(_lama,true)):one(_lama,true))
+      .then(c=>{Wd.npc[_key]=c;}).catch(()=>{}));
+  }
   for(const n of ['petal','firefly','sparkle','cloud'])
     jobs.push(one(n+'.png',true).then(c=>{Wd.amb[n]=c;}).catch(()=>{}));
   for(const n of ['tower_ally','tower_ally_broken','tower_foe','tower_foe_broken',
                   'base_ally','base_ally_broken','base_foe','base_foe_broken'])
     jobs.push(one(n+'.png',true).then(c=>{Wd.struct[n]=c;}).catch(()=>{}));
+  /* A. monumen batu ala referensi (bila tim ART menyediakannya); bila gagal ->
+     fallback prosedural prerender (ensureMonument, tanpa alokasi per frame) */
+  jobs.push(one('monument.png',true).then(c=>{Wd.struct.monument=c;}).catch(()=>{}));
+  jobs.push(one('monument_broken.png',true).then(c=>{Wd.struct.monument_broken=c;}).catch(()=>{}));
   jobs.push(one('dummy.png',true).then(c=>{Wd.dummy=c;}).catch(()=>{}));
   jobs.push(one('dummy_hit.png',true).then(c=>{Wd.dummyHit=c;}).catch(()=>{}));
-  jobs.push(one('minion_ally.png',true).then(c=>{Wd.minion[0]=c;}).catch(()=>{}));
-  jobs.push(one('minion_foe.png',true).then(c=>{Wd.minion[1]=c;}).catch(()=>{}));
+  /* v15: minion prajurit baru (soldier_*.png, 4 frame jalan) prioritas;
+     fallback strip lama */
+  jobs.push(one('soldier_ally.png',true).then(im=>im||one('minion_ally.png',true))
+    .then(c=>{Wd.minion[0]=c;}).catch(()=>{}));
+  jobs.push(one('soldier_foe.png',true).then(im=>im||one('minion_foe.png',true))
+    .then(c=>{Wd.minion[1]=c;}).catch(()=>{}));
   G.world.pre=Promise.all(jobs).then(()=>{
     Wd.ready=true;
     // art tiba di tengah battle -> bangun ulang lapis arena yg prosedural
@@ -396,14 +435,18 @@ function makeHero(ch,team,isPlayer){
     cds:[0,0,0,0],atkCd:0,animT:rnd(0,6),pt:0,pose:'idle',
     stun:0,shield:0,buff:0,alive:true,respawnT:5,
     atkCombo:0,kbx:0,kby:0,dashT:0,dashCd:0,dashDx:0,dashDy:0,
-    target:null,kills:0,comboN:0,comboT:0};
+    target:null,kills:0,deaths:0,comboN:0,comboT:0};
   if(G.difficulty==='hard'&&!isPlayer){h.hp=h.maxhp=Math.round(ch.hp*1.2);}
   return h;
 }
-function makeMinion(team,strong){
+function makeMinion(team,strong,sx,sy){
+  /* B. minion ala referensi: spawn formasi kolom berbaris (sx,sy eksplisit);
+   * bila tak diberi, acak seperti dulu (dipakai Kage Bunshin). */
   const baseX=team===0?90:WORLD_W-90;
   return{kind:'minion',team,
-    x:baseX+rnd(-20,20),y:rnd(LANE_TOP+40,LANE_BOT-40),dir:team===0?1:-1,
+    x:sx!==undefined?sx:baseX+rnd(-20,20),
+    y:sy!==undefined?clamp(sy,LANE_TOP+10,LANE_BOT-8):rnd(LANE_TOP+40,LANE_BOT-40),
+    dir:team===0?1:-1,
     ch:{body:team===0?'#3a6bd8':'#d83a3a',head:'#e8b98d',accent:'#222'},charId:'genin',
     hp:strong?70:34,maxhp:strong?70:34,atk:strong?8:4,
     speed:rnd(1.4,1.9),atkCd:0,animT:rnd(0,6),pose:'run',pt:0,
@@ -418,14 +461,15 @@ function makeDummy(){
     guard:100,guardMax:100,guardBreakT:0,hitT:-9};
 }
 function makeTower(team,x,inner){
-  /* balance QA: struktur lebih alot agar pacing tak terlalu cepat (tower+base
-     tak hancur dalam 1-2 menit saat pemain idle) */
+  /* G. BALANCE (pacing ala Naruto Senki): tower jauh lebih alot — solo hero
+     butuh ~40 dtk untuk menjatuhkan tower luar; armor struktur 0.3x di
+     damage() membuat dive 3 hero tak instan. Match target 3-6 menit. */
   return{kind:'tower',team,x,y:(LANE_TOP+LANE_BOT)/2,inner:!!inner,
-    hp:260,maxhp:260,range:230,atkCd:0,alive:true,dir:team===0?1:-1};
+    hp:380,maxhp:380,range:230,atkCd:0,alive:true,dir:team===0?1:-1};
 }
 function makeBase(team){
   const x=team===0?60:WORLD_W-60;
-  return{kind:'base',team,x,y:(LANE_TOP+LANE_BOT)/2,hp:480,maxhp:480,alive:true,dir:team===0?1:-1};
+  return{kind:'base',team,x,y:(LANE_TOP+LANE_BOT)/2,hp:650,maxhp:650,alive:true,dir:team===0?1:-1};
 }
 
 /* ---------- partikel & teks ---------- */
@@ -460,11 +504,23 @@ function banner(txt,sub,big,dur){
 /* easeOutBack murni — untuk pop animasi banner besar */
 function easeOutBack(x){const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2);}
 
+/* F. entri scoreboard per petarung (dibuat malas: mencakup spawn susulan
+ * mode survival). kills/deaths dibaca LANGSUNG dari objek fighter (live). */
+function scoreFor(h){
+  if(!G.score)G.score=[];
+  for(let i=0;i<G.score.length;i++)if(G.score[i].f===h)return G.score[i];
+  const e={f:h,charId:h.ch?h.ch.id:'?',name:h.ch?h.ch.name:'?',team:h.team,isPlayer:!!h.isPlayer};
+  G.score.push(e);
+  return e;
+}
 /* ---------- damage ---------- */
 function damage(t,dmg,src){
   if(!t.alive||G.over)return;
   if(t.dashT>0&&t.kind==='hero')return;               // iframe saat dash
   if(t.shield>0)dmg*=0.35;
+  /* G. ARMOR STRUKTUR: damage hero ke tower/base x0.3 (minion tetap penuh) —
+     tower tak rontok dalam belasan detik saat di-dive. */
+  if((t.kind==='tower'||t.kind==='base')&&src&&src.kind==='hero')dmg*=0.3;
   if(t.guardBreakT>0)dmg*=1.5;                        // guard break: damage +50%
   t.hp-=dmg;
   const heroHit=t.kind==='hero';
@@ -500,10 +556,13 @@ function damage(t,dmg,src){
     t.hp=0;t.alive=false;t.pose='dead';
     puff(t.x,t.y-20,'#ff5e5e',16,3,.7,5);
     NWAudio.noise(.25,.2);
+    /* F. catat death per petarung (pasangan dari kills) */
+    if(t.kind==='hero'){t.deaths=(t.deaths||0)+1;scoreFor(t);}
     /* pengumuman K.O. layar besar (cooldown 3 dtk agar tak spam di war) */
     if(t.kind==='hero'&&G.koCd<=0){G.koCd=3;banner('K.O.!',t.ch.name,true);}
     if(src&&src.kind==='hero'&&src.team!==t.team){
       src.kills++;G.kills[src.team]++;
+      scoreFor(src); // F. pastikan petarung tercatat di scoreboard
       const gain=t.kind==='hero'?25:t.kind==='tower'?40:t.kind==='base'?0:5;
       if(src.isPlayer&&gain){G.coins+=gain;ftext(t.x,t.y-100,'+'+gain+' koin','#ffd23e');}
     }
@@ -766,6 +825,13 @@ function minionAI(m,dt){
   m.kbx=(m.kbx||0)*0.9;
   if(m.atkCd>0)m.atkCd-=dt;
 }
+/* B. spawn wave: prajurit BERBARIS satu kolom (ala referensi) — x sama,
+ * y berjarak 44px, berangkat dari base masing-masing. */
+function spawnWaveMinion(team,k,n){
+  const bx=team===0?90:WORLD_W-90;
+  const cy=(LANE_TOP+LANE_BOT)/2;
+  return makeMinion(team,false,bx+rnd(-8,8),cy+(k-(n-1)/2)*44+rnd(-6,6));
+}
 function towerAI(t,dt){
   if(!t.alive)return;
   if(t.atkCd>0){t.atkCd-=dt;return;}
@@ -774,9 +840,9 @@ function towerAI(t,dt){
   for(const m of G.minions)if(m.alive&&m.team===foe){const d=dist(t,m);if(d<t.range&&d<bd){bd=d;best=m;}}
   if(!best)for(const h of G.fighters)if(h.alive&&h.team===foe){const d=dist(t,h);if(d<t.range&&d<bd){bd=d;best=h;}}
   if(best){
-    t.atkCd=1.25;
+    t.atkCd=1.1;
     const ang=Math.atan2((best.y-40)-t.y,best.x-t.x);
-    fireProj({x:t.x,y:t.y-80,ang,speed:8,dmg:13,color:'#ff9a3e',radius:10,team:t.team,src:t});
+    fireProj({x:t.x,y:t.y-80,ang,speed:8,dmg:15,color:'#ff9a3e',radius:10,team:t.team,src:t});
     puff(t.x,t.y-80,'#ff9a3e',5,2,.3,3);
   }
 }
@@ -817,7 +883,7 @@ function update(dt){
     G.waveT-=dt;
     if(G.waveT<=0){G.waveT=G.mode==='survival'?9:7;
       const n=G.mode==='war'?4:3;
-      for(let k=0;k<n;k++){G.minions.push(makeMinion(0));G.minions.push(makeMinion(1));}
+      for(let k=0;k<n;k++){G.minions.push(spawnWaveMinion(0,k,n));G.minions.push(spawnWaveMinion(1,k,n));}
     }
   }
   // survival spawner
@@ -890,9 +956,12 @@ function update(dt){
       if(hit.length){
         for(const e of hit){
           let dm=pr.dmg;
+          /* tower dalam berkurang damage bila tower luar masih hidup
+           * (loop polos — tanpa closure, tanpa alokasi di hot path) */
           if(e.kind==='tower'&&e.inner){
-            const outer=G.towers.find(t=>t.team===e.team&&!t.inner&&t.alive);
-            if(outer)dm*=0.1;
+            let outerAlive=false;
+            for(const t2 of G.towers)if(t2.team===e.team&&!t2.inner&&t2.alive){outerAlive=true;break;}
+            if(outerAlive)dm*=0.1;
           }
           damage(e,dm,pr.src);if(pr.stun>0&&e.stun!==undefined)e.stun=pr.stun;
         }
@@ -938,18 +1007,20 @@ function drawNinja(g,e,scale){
   g.restore();
 }
 function drawFighter(g,e){
-  /* minion: strip 4 frame chibi genin (art dunia); fallback prosedural bila gagal */
+  /* minion: strip 4 frame (soldier baru 120x160 / genin lama 128x128);
+   * fallback prosedural bila gagal. Ukuran frame adaptif, tanpa alokasi. */
   if(e.kind==='minion'){
     const cv=G.world.minion[e.team];
     if(cv&&cv.width){
       const fi=Math.floor((e.animT||0)*8)%4,s=76;
+      const fw=cv.width/4,fh=cv.height,dh=s*fh/fw;
       g.save();g.translate(e.x,e.y);
       g.fillStyle='rgba(0,0,0,0.26)';
       g.beginPath();g.ellipse(0,-2,16,5,0,0,Math.PI*2);g.fill();
       g.scale(e.dir>=0?1:-1,1);
-      g.drawImage(cv,fi*128,0,128,128,-s/2,-s,s,s);
+      g.drawImage(cv,Math.floor(fi*fw),0,Math.floor(fw),Math.floor(fh),-s/2,-dh,s,dh);
       g.restore();
-      drawHPBar(g,e.x,e.y-100,34,e.hp/e.maxhp);
+      drawHPBar(g,e.x,e.y-dh-24,34,e.hp/e.maxhp);
       return;
     }
   }
@@ -1014,69 +1085,156 @@ function drawCombo(g,h){
   g.fillText('x'+n,0,0);
   g.restore();
 }
-function drawTower(g,t){
-  /* sprite art dunia (utuh/rusak); fallback kotak prosedural bila gagal dimuat */
-  const key=t.team===0?(t.alive?'tower_ally':'tower_ally_broken')
-                      :(t.alive?'tower_foe':'tower_foe_broken');
-  const cv=G.world.struct[key];
-  if(cv&&cv.width){
-    const h=t.alive?150:80,w=h*(cv.width/cv.height);
-    g.save();g.translate(t.x,t.y);
-    g.fillStyle='rgba(0,0,0,0.26)';
-    g.beginPath();g.ellipse(0,-2,w*0.4,6,0,0,Math.PI*2);g.fill();
-    g.drawImage(cv,-w/2,-h,w,h);
-    const prot=t.alive&&t.inner&&G.towers.find(x=>x.team===t.team&&!x.inner&&x.alive);
-    if(prot){g.strokeStyle='rgba(126,224,255,.7)';g.lineWidth=3;
-      g.beginPath();g.arc(0,-h/2,70+Math.sin(G.time*4)*4,0,7);g.stroke();}
-    g.restore();
-    if(t.alive)drawHPBar(g,t.x,t.y-h-40,90,t.hp/t.maxhp);
-    return;
+/* ============================================================================
+ * A. MONUMEN BATU + SEMAK ala referensi Naruto Senki (bukan menara).
+ * Prioritas: assets/world/monument.png & monument_broken.png bila ADA
+ * (dimuat preloadWorld); bila BELUM ADA -> fallback prosedural di bawah,
+ * di-PRERENDER SEKALI ke offscreen (ensureMonument), hot path hanya drawImage.
+ * Utuh: slab batu abu + alas bertingkat + kain tim + semak hijau di kiri-kanan.
+ * Hancur: slab miring retak + puing + semak layu — beda JELAS dari yg utuh.
+ * ========================================================================== */
+/* LCG deterministik: tekstur batu stabil antar load (tanpa Math.random) */
+function _lcg(seed){let s=seed>>>0;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};}
+/* rumpun semak: lingkaran hijau berlapis (wilted = layu, lebih gelap) */
+function _bush(g,cx,cy,s,wilted){
+  const R=_lcg((cx|0)*7919+(cy|0)*104729+(wilted?7:0));
+  const cols=wilted?['#24401f','#33582b','#3f6b34']:['#2e7a3a','#3f9e4d','#57c267'];
+  for(let i=0;i<11;i++){
+    const a=R()*Math.PI*2,rr2=(6+R()*13)*s;
+    const x=cx+Math.cos(a)*rr2,y=cy+Math.sin(a)*rr2*0.75;
+    g.fillStyle=cols[i%3];
+    g.beginPath();g.arc(x,y,(8+R()*8)*s,0,7);g.fill();
   }
-  g.save();g.translate(t.x,t.y);
-  const w=64,h=130;
-  const prot=t.inner&&G.towers.find(x=>x.team===t.team&&!x.inner&&x.alive);
-  g.fillStyle=t.alive?(t.team===0?'#4a6fa5':'#a54a4a'):'#555';
-  g.fillRect(-w/2,-h,w,h);
-  g.fillStyle=t.alive?(t.team===0?'#33507e':'#7e3333'):'#444';
-  for(let i=0;i<4;i++)g.fillRect(-w/2+i*(w/4),-h-16,w/4-4,16);
-  g.fillStyle='#2c2c34';g.fillRect(-8,-h-34,16,20);
-  g.fillStyle='#ffd23e';g.beginPath();g.arc(0,-h-24,5,0,7);g.fill();
-  if(prot){g.strokeStyle='rgba(126,224,255,.7)';g.lineWidth=3;
-    g.beginPath();g.arc(0,-h/2,70+Math.sin(G.time*4)*4,0,7);g.stroke();}
+  g.fillStyle=wilted?'rgba(120,90,40,.35)':'rgba(255,255,255,.16)';
+  g.beginPath();g.arc(cx-6*s,cy-8*s,9*s,0,7);g.fill(); // kilau daun
+}
+/* lempeng batu bertingkat (alas monumen) */
+function _slab(g,x,y,w,h){
+  g.fillStyle='#3f4450';g.fillRect(x-3,y-3,w+6,h+6);
+  g.fillStyle='#6b7280';g.fillRect(x,y,w,h);
+  g.fillStyle='#8b93a1';g.fillRect(x,y,w,4);          // highlight atas
+  g.fillStyle='#4a505c';g.fillRect(x,y+h-4,w,4);       // bayangan bawah
+}
+function _speckle(g,R,x0,y0,w,h,n,color){
+  g.fillStyle=color;
+  for(let i=0;i<n;i++){g.fillRect(x0+R()*w,y0+R()*h,2.5,2.5);}
+}
+function _buildMonument(bannerColor){
+  const W=200,H=215,c=mkCanvas(W,H),g=c.getContext('2d');
+  _bush(g,32,166,1.05,false); _bush(g,168,166,1.05,false); // semak kiri-kanan
+  _slab(g,52,170,96,24);                                   // alas bawah
+  _slab(g,62,148,76,24);                                   // alas atas
+  /* badan monumen: slab abu membulat di atas */
+  g.fillStyle='#33373f';rr(g,73,44,54,108,17);g.fill();
+  g.fillStyle='#59606c';rr(g,76,47,48,102,15);g.fill();
+  g.fillStyle='#7d8494';g.fillRect(80,54,10,88);           // bevel kiri
+  g.fillStyle='#454a55';g.fillRect(110,54,10,88);          // teduh kanan
+  const R=_lcg(1234);
+  _speckle(g,R,80,56,40,88,16,'rgba(0,0,0,.20)');
+  _speckle(g,R,80,56,40,88,8,'rgba(255,255,255,.12)');
+  /* ukiran: lingkaran + titik (ciri monumen) — di bawah kain tim agar tak tertutup */
+  g.strokeStyle='#3f4450';g.lineWidth=4;
+  g.beginPath();g.arc(100,116,13,0,7);g.stroke();
+  g.fillStyle='#3f4450';g.beginPath();g.arc(100,116,5,0,7);g.fill();
+  /* lumut di kaki monumen */
+  g.fillStyle='rgba(70,140,80,.5)';
+  g.beginPath();g.ellipse(86,142,12,5,0,0,7);g.fill();
+  /* kain tim: penanda sisi (biru = ally, merah = foe) */
+  g.fillStyle='rgba(0,0,0,.4)';g.fillRect(93,58,16,34);
+  g.fillStyle=bannerColor;g.fillRect(94,59,14,30);
+  g.fillStyle='rgba(255,255,255,.35)';g.fillRect(94,59,14,5);
+  g.fillStyle=bannerColor;                                // ujung runcing
+  g.beginPath();g.moveTo(94,89);g.lineTo(101,97);g.lineTo(108,89);g.closePath();g.fill();
+  return c;
+}
+function _buildMonumentBroken(){
+  const W=200,H=215,c=mkCanvas(W,H),g=c.getContext('2d');
+  const R=_lcg(777);
+  _bush(g,34,168,0.95,true); _bush(g,166,168,0.95,true);  // semak layu
+  /* alas retak & bergeser */
+  _slab(g,50,172,60,22);_slab(g,112,174,56,22);
+  g.strokeStyle='#2c3038';g.lineWidth=2.5;
+  g.beginPath();g.moveTo(96,174);g.lineTo(104,194);g.lineTo(98,196);g.stroke();
+  /* sisa slab MIRING dengan puncak bergerigi (jelas hancur) */
+  g.save();g.translate(100,168);g.rotate(-0.28);
+  g.fillStyle='#33373f';
+  g.beginPath();
+  g.moveTo(-24,0);g.lineTo(-24,-52);g.lineTo(-14,-66);g.lineTo(-6,-50);
+  g.lineTo(2,-70);g.lineTo(10,-52);g.lineTo(18,-62);g.lineTo(24,-48);g.lineTo(24,0);
+  g.closePath();g.fill();
+  g.fillStyle='#59606c';
+  g.beginPath();
+  g.moveTo(-20,-2);g.lineTo(-20,-50);g.lineTo(-14,-60);g.lineTo(-6,-46);
+  g.lineTo(2,-64);g.lineTo(10,-48);g.lineTo(18,-56);g.lineTo(20,-2);
+  g.closePath();g.fill();
   g.restore();
-  if(t.alive)drawHPBar(g,t.x,t.y-h-46,90,t.hp/t.maxhp);
+  /* lempengan jatuh di tanah */
+  g.save();g.translate(150,186);g.rotate(0.5);
+  g.fillStyle='#4a505c';g.fillRect(-22,-8,44,16);
+  g.fillStyle='#6b7280';g.fillRect(-22,-8,44,6);
+  g.restore();
+  /* puing berserakan */
+  for(let i=0;i<9;i++){
+    g.fillStyle=i%2?'#59606c':'#454a55';
+    const px=56+R()*88,py=176+R()*22,s=5+R()*8;
+    g.save();g.translate(px,py);g.rotate(R()*3);g.fillRect(-s/2,-s/3,s,s*0.66);g.restore();
+  }
+  _speckle(g,R,60,180,80,16,10,'rgba(0,0,0,.25)');
+  return c;
+}
+/* bangun SEKALI (lazy, dijaga flag) — drawTower/drawBase hanya drawImage */
+function ensureMonument(){
+  const S=G.world.struct;
+  if(S._monOk)return;
+  S._monOk=true;
+  S._monAlly=_buildMonument('#3a6bd8');
+  S._monFoe=_buildMonument('#d83a3a');
+  S._monBroken=_buildMonumentBroken();
+}
+/* pilih sprite monumen: file ART dulu, fallback prosedural. Tanpa alokasi. */
+function monumentImg(alive,team){
+  const S=G.world.struct;
+  if(alive){
+    const f=S.monument;
+    if(f&&f.width)return f;
+    ensureMonument();
+    return team===0?S._monAlly:S._monFoe;
+  }
+  const b=S.monument_broken;
+  if(b&&b.width)return b;
+  ensureMonument();
+  return S._monBroken;
+}
+/* lingkaran proteksi tower-dalam (tanpa closure -> tanpa alokasi per frame) */
+function innerProt(t){
+  if(!(t.alive&&t.inner))return false;
+  for(const x of G.towers)if(x.team===t.team&&!x.inner&&x.alive)return true;
+  return false;
+}
+function drawTower(g,t){
+  /* A. tower = MONUMEN BATU + semak (referensi Naruto Senki, bukan menara).
+   * Status utuh/hancur JELAS dari sprite-nya sendiri. */
+  const cv=monumentImg(t.alive,t.team);
+  const h=t.alive?175:120,w=h*(cv.width/cv.height);
+  g.save();g.translate(t.x,t.y);
+  g.fillStyle='rgba(0,0,0,0.26)';
+  g.beginPath();g.ellipse(0,-2,w*0.36,7,0,0,Math.PI*2);g.fill();
+  g.drawImage(cv,-w/2,-h,w,h);
+  if(innerProt(t)){g.strokeStyle='rgba(126,224,255,.7)';g.lineWidth=3;
+    g.beginPath();g.arc(0,-h/2,80+Math.sin(G.time*4)*4,0,7);g.stroke();}
+  g.restore();
+  if(t.alive)drawHPBar(g,t.x,t.y-h-34,96,t.hp/t.maxhp);
 }
 function drawBase(g,b){
-  /* sprite kristal art dunia (utuh/rusak); fallback emblem prosedural bila gagal */
-  const key=b.team===0?(b.alive?'base_ally':'base_ally_broken')
-                      :(b.alive?'base_foe':'base_foe_broken');
-  const cv=G.world.struct[key];
-  if(cv&&cv.width){
-    const h=b.alive?120:70,w=h*(cv.width/cv.height);
-    g.save();g.translate(b.x,b.y);
-    g.fillStyle='rgba(0,0,0,0.26)';
-    g.beginPath();g.ellipse(0,-2,w*0.42,7,0,0,Math.PI*2);g.fill();
-    g.drawImage(cv,-w/2,-h,w,h);
-    g.restore();
-    if(b.alive)drawHPBar(g,b.x,b.y-h-30,120,b.hp/b.maxhp);
-    return;
-  }
+  /* A. base = monumen LEBIH BESAR + semak (satu bahasa visual dgn tower) */
+  const cv=monumentImg(b.alive,b.team);
+  const h=b.alive?215:130,w=h*(cv.width/cv.height);
   g.save();g.translate(b.x,b.y);
-  const alive=b.alive;
-  /* emblem kecil di ATAS garis tanah — tidak menutupi fighter (QA #4) */
-  const R=40,cy=-86;
-  g.fillStyle=alive?(b.team===0?'#2e5f8a':'#8a2e2e'):'#444';
-  g.beginPath();g.arc(0,cy,R,0,7);g.fill();
-  g.lineWidth=4;g.strokeStyle=alive?'rgba(255,255,255,.35)':'#333';
-  g.beginPath();g.arc(0,cy,R,0,7);g.stroke();
-  g.fillStyle=alive?'#d9d9e2':'#555';
-  g.font='bold 34px sans-serif';g.textAlign='center';g.textBaseline='middle';
-  g.fillText(b.team===0?'木':'砂',0,cy+2);g.textBaseline='alphabetic';
-  /* alas kecil di tanah */
-  g.fillStyle=alive?(b.team===0?'rgba(46,95,138,.5)':'rgba(138,46,46,.5)'):'rgba(80,80,80,.4)';
-  g.beginPath();g.ellipse(0,-4,52,10,0,0,7);g.fill();
+  g.fillStyle='rgba(0,0,0,0.26)';
+  g.beginPath();g.ellipse(0,-2,w*0.36,8,0,0,Math.PI*2);g.fill();
+  g.drawImage(cv,-w/2,-h,w,h);
   g.restore();
-  if(b.alive)drawHPBar(g,b.x,b.y-150,120,b.hp/b.maxhp);
+  if(b.alive)drawHPBar(g,b.x,b.y-h-30,130,b.hp/b.maxhp);
 }
 function render(){
   const g=G.ctx,L=G.layers;
@@ -1085,7 +1243,12 @@ function render(){
   const v=fitView(cw,ch,G.dpr);
   G.vw=v.vw;G.portrait=v.portrait;
   g.setTransform(1,0,0,1,0,0);
-  g.fillStyle='#000';g.fillRect(0,0,cw,ch);
+  /* v15c: pengisi letterbox gradien gelap rapi (bukan hitam pekat), di-cache per tinggi kanvas */
+  var _lbk='lb'+ch;
+  if(G._lbKey!==_lbk){G._lbKey=_lbk;var _lg=g.createLinearGradient(0,0,0,ch);
+    _lg.addColorStop(0,'#101725');_lg.addColorStop(.55,'#080b12');_lg.addColorStop(1,'#030405');
+    G._lbGrad=_lg;}
+  g.fillStyle=G._lbGrad;g.fillRect(0,0,cw,ch);
   g.setTransform(G.dpr*v.s,0,0,G.dpr*v.s,G.dpr*v.ox,G.dpr*v.oy);
   if(v.portrait){
     /* pita di atas & bawah area dunia 540px (gradien per arena, dibuat di buildLayers) */
@@ -1094,6 +1257,8 @@ function render(){
     if(botH>1){g.fillStyle=G.bandBot||'#000';g.fillRect(-2,540,v.vw+4,botH+2);}
   }
   g.save();
+  /* v15c: jepit gambar dunia ke area pandang — cegah bocor ke bilah letterbox (strip hijau di desktop lebar) */
+  g.beginPath();g.rect(0,0,v.vw,540);g.clip();
   let sx=0,sy=0;
   if(G.shake>0){sx=rnd(-G.shake,G.shake)*0.4;sy=rnd(-G.shake,G.shake)*0.4;}
   const cam=Math.round(G.cam+sx);
@@ -1113,20 +1278,34 @@ function render(){
   g.save();g.translate(-cam,Math.round(-sy));
   g.drawImage(L.gnd,0,0);
   /* v15: NPC anime di tepi base (kaki di y=180, di atas lane) — sprite +
-   * animasi ringan, tanpa alokasi per frame */
+   * animasi idle 4 frame, tanpa alokasi per frame.
+   * Strip baru (assets/npc/): villager 480x160 (4x120), guard 384x192 (4x96).
+   * Fallback strip lama bila art baru gagal dimuat. */
   const _npc=G.world.npc;
   if(_npc){
-    const f3=Math.floor(G.time*2.2)%3;
-    const gt=Math.floor(G.time*1.5)%6, gf=gt<4?(gt&1):gt-2;
+    const tf=Math.floor(G.time*2.2)%4;
     const nv=_npc.npc_villager;
     if(nv&&nv.width){
-      g.drawImage(nv,f3*64,0,64,96,110-32,180-96,64,96);      // warga pria
-      g.drawImage(nv,f3*64,96,64,96,190-32,180-96,64,96);     // warga wanita
+      if(nv.width>=400){ /* strip baru: 4 frame 120x160 */
+        g.drawImage(nv,tf*120,0,120,160,110-60,180-160,120,160);   // warga 1
+        g.drawImage(nv,((tf+2)%4)*120,0,120,160,190-60,180-160,120,160); // warga 2
+      }else{ /* strip lama 192x208: pria 64x96 (y 0..96), wanita 64x104 (y 104..208, headroom 8px) */
+        const f3=tf%3;
+        g.drawImage(nv,f3*64,0,64,96,110-32,180-96,64,96);        // warga pria
+        g.drawImage(nv,f3*64,104,64,104,190-32,180-104,64,104);   // warga wanita
+      }
     }
     const ng=_npc.npc_guard;
-    if(ng&&ng.width)g.drawImage(ng,gf*64,0,64,96,2290-32,180-96,64,96); // penjaga
+    if(ng&&ng.width){
+      if(ng.width>=300) /* strip baru: 4 frame 96x192 */
+        g.drawImage(ng,tf*96,0,96,192,2290-48,180-192,96,192);    // penjaga
+      else{ /* strip lama 256x96: 4 frame 64x96 */
+        const gt=Math.floor(G.time*1.5)%6, gf=gt<4?(gt&1):gt-2;
+        g.drawImage(ng,gf*64,0,64,96,2290-32,180-96,64,96);
+      }
+    }
     const nk=_npc.npc_kid;
-    if(nk&&nk.width)g.drawImage(nk,f3*64,0,64,96,2200-32,180-96,64,96); // anak lompat
+    if(nk&&nk.width)g.drawImage(nk,(tf%3)*64,0,64,96,2200-32,180-96,64,96); // anak
   }
   // zona chakra tengah
   const czx=WORLD_W/2,czy=(LANE_TOP+LANE_BOT)/2;
@@ -1268,11 +1447,12 @@ function drawBaseIcon(g,x,y,s,color){
   g.strokeStyle='rgba(0,0,0,.5)';g.lineWidth=1.5;
   g.beginPath();g.moveTo(x,y+s*0.42);g.lineTo(x+w,y+s*0.42);g.stroke();
 }
-/* satu item: ikon + bar HP + label kecil. return lebar terpakai. */
-function structItem(g,x,team,align,label,ratio,alive,iconFn){
+/* satu item: ikon + bar HP + label kecil. return lebar terpakai.
+ * v15c: y0 digeser ke bawah (160) agar label tak tertutup sprite NPC (kaki NPC di y=180). */
+function structItem(g,x,team,align,label,ratio,alive,iconFn,y0){
   const s=16,bw=42;
   const bx=align==='left'?x:x-bw;
-  const iy=84;
+  const iy=(y0==null?84:y0);
   iconFn(g,bx,iy,s,alive?TEAM_COL[team]:DEAD_COL);
   if(!alive){ /* silang merah = hancur */
     g.strokeStyle='#ff5e5e';g.lineWidth=2.5;g.lineCap='round';
@@ -1292,13 +1472,15 @@ function structItem(g,x,team,align,label,ratio,alive,iconFn){
   return bw+10;
 }
 function structBars(g){
-  /* kiri: tim pemain — kanan: tim musuh (urutan: tower luar, tower dalam, base) */
+  /* kiri: tim pemain — kanan: tim musuh (urutan: tower luar, tower dalam, base).
+   * v15c: blok digeser ke y=160 agar label BASE/TOWER tak bertumpuk sprite NPC. */
+  const Y0=160;
   let lx=10;
-  for(const t of G.towers)if(t.team===0)lx+=structItem(g,lx,0,'left','TOWER',t.hp/t.maxhp,t.alive,drawTowerIcon);
-  for(const b of G.bases)if(b.team===0)lx+=structItem(g,lx,0,'left','BASE',b.hp/b.maxhp,b.alive,drawBaseIcon);
+  for(const t of G.towers)if(t.team===0)lx+=structItem(g,lx,0,'left','TOWER',t.hp/t.maxhp,t.alive,drawTowerIcon,Y0);
+  for(const b of G.bases)if(b.team===0)lx+=structItem(g,lx,0,'left','BASE',b.hp/b.maxhp,b.alive,drawBaseIcon,Y0);
   let rx=(G.vw||960)-10;
-  for(const t of G.towers)if(t.team===1)rx-=structItem(g,rx,1,'right','TOWER',t.hp/t.maxhp,t.alive,drawTowerIcon);
-  for(const b of G.bases)if(b.team===1)rx-=structItem(g,rx,1,'right','BASE',b.hp/b.maxhp,b.alive,drawBaseIcon);
+  for(const t of G.towers)if(t.team===1)rx-=structItem(g,rx,1,'right','TOWER',t.hp/t.maxhp,t.alive,drawTowerIcon,Y0);
+  for(const b of G.bases)if(b.team===1)rx-=structItem(g,rx,1,'right','BASE',b.hp/b.maxhp,b.alive,drawBaseIcon,Y0);
 }
 /* Minimap: peta garis lane + posisi tower/fighter + bingkai viewport.
  * Dibuat terlihat "jadi" (bukan UI mentah): bingkai emas + sudut membulat. */
@@ -1432,6 +1614,7 @@ function start(cfg){
   G.hitstop=0;G.koCd=0;
   G.perf={ema:16.7,level:0,bad:0,good:0}; // reset degradasi adaptif tiap battle
   G.cam=0;G.kills=[0,0];G.coins=0;G.banner=null;G.bannerT=0;
+  G.score=[]; // F. scoreboard match baru: diisi scoreFor() saat kill/death terjadi
   G.paused=false;G.running=true;G.last=performance.now();
   // genta perang
   NWAudio.drum();
@@ -1466,6 +1649,17 @@ window.NWGame={
   onEnd(fn){G.onEnd=fn;},
   getState(){return G;},
   stop(){G.running=false;},
+  /* F. SCOREBOARD: [{charId,name,team,isPlayer,kills,deaths}] per petarung
+   * per match — untuk dibaca UI lead (window.NWUI). Live dari objek fighter. */
+  scoreboard(){
+    const out=[];
+    for(const h of G.fighters){
+      const e=scoreFor(h);
+      out.push({charId:e.charId,name:e.name,team:e.team,isPlayer:e.isPlayer,
+                kills:h.kills|0,deaths:h.deaths|0});
+    }
+    return out;
+  },
   /* v15: pause — loop() melewati update/render total saat true */
   setPaused(v){G.paused=!!v;},
   isPaused(){return !!G.paused;},
