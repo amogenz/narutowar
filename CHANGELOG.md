@@ -2,6 +2,65 @@
 
 Riwayat perubahan game per milestone. Format: tanggal — ringkasan.
 
+## 2026-10-05 — v14: FIX LAYOUT PORTRAIT + TOMBOL ORIENTASI + OPTIMASI SMOOTH
+
+**Latar:** Screenshot HP Bos (layar PILIH MODE portrait) menunjukkan tombol
+KEMBALI jadi panel raksasa, kartu bertumpuk, tombol HARD overlap. Bos juga
+minta tombol orientasi kembali (opsi) dan game "full smooth".
+
+**Yang berubah (index.html, css/style.css v13→v14, js/game.js v10→v11,
+js/ui.js v14→v15, version.json v13→v14):**
+
+1. **Root cause layout diperbaiki**: class CSS `.ghost` dipakai dua arti
+   (tombol abu-abu DAN bar HP) sehingga semua tombol `btn ghost` kena
+   `position:absolute` nyasar. Class bar HP di-rename jadi `.barghost`;
+   tombol KEMBALI/NORMAL/HARD/MENU UTAMA kembali normal.
+2. **Tombol KEMBALI baru**: 4 tombol kembali jadi tombol panah SVG kecil
+   konsisten di pojok kiri atas tiap panel (ID dipertahankan).
+3. **Portrait 360px dirapikan**: mode-grid 2 kolom kompak, char-grid &
+   arena-grid 2 kolom, diff-row wrap anti-overflow, judul tidak kepotong.
+4. **Tombol orientasi (opsi, bukan paksaan)**: ikon SVG di HUD + layar
+   judul; toggle lock landscape on/off, tersimpan di localStorage, tanpa
+   auto-lock dan tanpa overlay paksa.
+5. **Optimasi performa**: game loop fixed-step 1/60 — sisa waktu tidak
+   lagi dibuang (timer tidak slow-motion); vignette gradient di-cache
+   (1.000 → 0,007 gradient/frame); alokasi hot-path -18%; degradasi
+   adaptif bila frame-time tinggi; cache elemen HUD (nol query DOM/frame).
+6. **Dekorasi arena dirapikan**: spanduk & baliho dipindah ke atas lane /
+   tepi base (keluar area aksi), dikecilkan, bingkai kayu menyatu arena
+   (border hijau mentah dihapus), tiang di tengah lane dihilangkan.
+
+
+## 2026-10-05 — v13: NO-FORCED-LANDSCAPE + nyaman portrait & landscape
+
+**Latar:** Arahan Bos — "Jangan paksa landscape. Buat nyaman user."
+Pemaksaan orientasi dihapus total; game menyesuaikan orientasi yang dipegang.
+
+**Yang berubah (index.html, css/style.css v12→v13, js/game.js v9→v10,
+js/ui.js v12→v13, version.json v12→v13):**
+
+1. **Hapus paksa landscape**: `screen.orientation.lock`, overlay "PUTAR HP
+   KAMU" (+ tombol PAKSA LANDSCAPE), putar-CSS `.forcerotate`, dan tombol
+   kunci-orientasi (`btn-orient`) DIHAPUS total. Fullscreen tetap sebagai opsi.
+2. **Portrait nyaman**: kamera 620px mengikuti pemain (aksi tetap terbaca),
+   canvas scale-to-fit, pita gradien langit/tanah per arena mengisi sisa
+   vertikal; minimap/viewport/banner/vignette/struct-bar mengikuti lebar view.
+   Kontrol sentuh dikompres di portrait (joystick + tombol jutsu lebih kecil).
+3. **Bug QA diperbaiki**: banner FIGHT! via wall-clock (selalu muncul walau
+   FPS rendah); baliho Pain/Zetsu pindah ke dekat base (tak menutupi
+   boneka/arena tengah); minimap dipoles (bingkai emas, sudut membulat);
+   HP bar hero naik 20px (tak menutupi wajah); kartu lawan misterius 1 ketuk
+   = ungkap + pilih; tombol MULAI BERTARUNG aktif langsung (arena default
+   konoha); canvas dibersihkan saat keluar ke menu (tak ada battlefield lama
+   di belakang judul); balance diperlambat (tower 170→260, base 320→480,
+   minion atk 5→4 / 10→8); tombol difficulty di-hardening (z-index di atas
+   overlay).
+4. **Catatan**: watermark "POWERED BY KURUMI" TIDAK DITEMUKAN di seluruh
+   codebase & aset (grep nol, inspeksi visual ~20 gambar bersih) — tidak ada
+   yang dihapus karena memang tidak ada.
+5. **Verifikasi**: `node --check` OK; smoke 69/69; integration 28/28;
+   cek portrait headless 12/12 (kamera 620px, clamp, band, balance).
+
 ## 2026-10-05 — v10: ANTI EMOJI total (aturan keras Bos, permanen)
 
 **Latar:** Bos menetapkan aturan permanen — tidak boleh ada emoji di mana pun
