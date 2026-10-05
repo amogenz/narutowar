@@ -137,5 +137,47 @@ S = NWGame.getState();
 ok('survival: gelombang jalan', S.survWave >= 1);
 ok('survival: musuh spawn', S.fighters.length >= 2);
 
+/* --- scoreboard (F): kill & death tercatat per petarung per match --- */
+NWGame.start({ mode: 'versus', arena: 'konoha', difficulty: 'normal',
+  player: NWChars[0], enemy: NWChars[1] });
+S = NWGame.getState();
+const foeSb = S.fighters[1];
+foeSb.hp = 1; foeSb.x = S.player.x + 60; foeSb.y = S.player.y; S.player.dir = 1;
+S.player.atkCd = 0;
+ok('attack membunuh musuh', NWGame.playerAttack() === true);
+S = NWGame.getState();
+ok('musuh mati', S.fighters[1].alive === false);
+ok('death tercatat di korban', S.fighters[1].deaths === 1);
+ok('kill tercatat di penyerang', S.player.kills === 1);
+const sb = NWGame.scoreboard();
+ok('scoreboard: 2 entri versus', sb.length === 2);
+const me = sb.find(e => e.isPlayer), en = sb.find(e => !e.isPlayer);
+ok('scoreboard: kill pemain', me.kills === 1 && me.deaths === 0);
+ok('scoreboard: death musuh', en.kills === 0 && en.deaths === 1);
+ok('scoreboard: charId & nama', me.charId === 'naruto' && en.name === 'Sasuke Uchiha');
+ok('scoreboard: tim benar', me.team === 0 && en.team === 1);
+
+/* --- pause (v15): game-time BENAR-BENAR berhenti --- */
+NWGame.start({ mode: 'versus', arena: 'konoha', difficulty: 'normal',
+  player: NWChars[0], enemy: NWChars[1] });
+for (let i = 0; i < 60; i++) NWGame._tick(1 / 60);
+NWGame.playerCast(0); // rasengan -> cooldown > 0
+const px0 = NWGame.getState().player.x;
+const tPause0 = NWGame.getState().time;
+const cdPause0 = NWGame.getState().player.cds[0];
+ok('pra-pause: cooldown aktif', cdPause0 > 0);
+NWGame.setPaused(true);
+ok('isPaused() true', NWGame.isPaused() === true);
+for (let i = 0; i < 120; i++) NWGame._tick(1 / 60); // 2 detik "game" saat pause
+ok('pause: game-time diam total', NWGame.getState().time === tPause0);
+ok('pause: posisi pemain diam', NWGame.getState().player.x === px0);
+ok('pause: cooldown diam', NWGame.getState().player.cds[0] === cdPause0);
+NWGame.setPaused(false);
+ok('isPaused() false', NWGame.isPaused() === false);
+for (let i = 0; i < 60; i++) NWGame._tick(1 / 60);
+ok('resume: game-time jalan lagi', NWGame.getState().time > tPause0);
+ok('resume: cooldown jalan lagi', NWGame.getState().player.cds[0] < cdPause0);
+NWGame.stop();
+
 console.log(`\nINTEGRATION: ${pass} lolos, ${fail} gagal`);
 process.exit(fail ? 1 : 0);

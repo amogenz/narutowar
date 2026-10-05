@@ -77,4 +77,24 @@ ketuk kartunya untuk lihat butuh berapa koin.
 6. **Perhatikan guard break di training** — biasakan menghafal urutan
  kombo + jutsu sebelum masuk Versus.
 
+## Musik & suara
+
+- **MUSIK** — musik latar: tenang-heroik di menu, tempo cepat saat
+  bertarung, jingle heroik saat menang. Semua komposisi **original**
+  (bukan OST Naruto) — dibuat langsung di HP/browser via WebAudio.
+- **SUARA** — efek: pukulan, jutsu, ledakan, klik tombol.
+- Atur di **menu JEDA** (tombol pause saat bertarung): `MUSIK: ON/OFF`
+  dan `SUARA: ON/OFF`. Pilihan tersimpan otomatis.
+- Musik berhenti saat game di-pause, lanjut lagi saat resume.
+- (Opsional, untuk yang punya file legal) taruh `menu.mp3` /
+  `battle.mp3` / `victory.mp3` di `assets/music/` — game otomatis
+  memakai file itu; bila tidak ada, synth bawaan yang dipakai.
+  **Jangan pakai OST berhak cipta.**
+
+## Stage
+
+Pilih arena di layar **PILIH ARENA**: ketuk thumbnail untuk melihat
+preview besar + deskripsi, lalu tekan **MULAI BERTARUNG**. Stage yang
+masih digembok bertuliskan **SEGERA HADIR**.
+
 Selamat bertarung, ninja! 

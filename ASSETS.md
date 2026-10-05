@@ -164,11 +164,146 @@ simpan PNG palet `dither=NONE`.
 | Ninja penjaga | `assets/world/npc/npc_guard.png` | 256×96 (4 × 64×96) | 11,4 KB | frame 0–1 idle napas (ikat kepala logam Konoha, rompi chunin hijau), 2 melambai, 3 hormat |
 | Anak kecil | `assets/world/npc/npc_kid.png` | 192×96 (3 × 64×96) | 8,2 KB | jongkok → lompat tertinggi → mendarat, loop; kaos oranye, celana biru |
 
+## Art batch 2026-10-06 (ART LEAD)
+
+Dibuat via media pipeline (AI image generator) + post-processing manual
+(skrip `assets/_artgen/process_art.py`: resize, kompresi JPG progresif,
+normalisasi background PNG ke `#FF00FF` murni via aturan hue 285–315,
+kuantisasi palet `dither=NONE` dengan 1 entri palet dipaksa magenta murni,
+ground dibuat tileable horizontal via mirror-blend). File mentah generator:
+`assets/_artgen/` (file `media-generation-*.jpg/png` + JSON metadata).
+
+Gaya: cel-shading anime, outline hitam tegas, warna flat saturated —
+selaras `assets/sprites/STYLE_GUIDE.md` & 8 screenshot referensi
+Naruto Senki asli (`~/workspace/user/files/Screenshot_20261006_0542*.jpg`
+s/d `..._054444_*.jpg`). Semua gambar original buatan sendiri:
+**tanpa teks, tanpa emoji, tanpa watermark** di dalam gambar.
+Batas keras: tiap file < 55 KB (limit upload Vercel).
+
+### Splash art karakter (`assets/splash/`)
+
+Full-body, pose dramatis + efek jurus khas, background dramatis
+(ala layar char-select Naruto Senki).
+
+| Karakter | File | Dimensi | Ukuran | Catatan |
+|---|---|---|---|---|
+| Naruto | `assets/splash/naruto.jpg` | 392×785 | 51 KB | Rasengan biru + aura chakra emas, bg merah |
+| Sasuke | `assets/splash/sasuke.jpg` | 491×982 | 53 KB | Chidori petir putih-biru, mata merah, bg badai ungu |
+| Kakashi | `assets/splash/kakashi.jpg` | 392×785 | 54 KB | Masker + rompi jonin hijau, kunai petir, kawanan ninken, hutan malam |
+| Sakura | `assets/splash/sakura.jpg` | 392×785 | 53 KB | Tinju chakra hijau + kelopak sakura, bg merah muda |
+| Itachi | `assets/splash/itachi.jpg` | 491×982 | 54 KB | Jubah hitam awan merah, mata merah, gagak + bulan merah |
+| Joly | `assets/splash/joly.jpg` | 392×785 | 54 KB | Maskot: peci hitam + jas hitam + dasi navy, shuriken teal, bg lab digital |
+
+### Art kartu mode (`assets/modes/`)
+
+| Mode | File | Dimensi | Ukuran | Catatan |
+|---|---|---|---|---|
+| Latihan | `assets/modes/latihan.jpg` | 640×320 | 52 KB | Lapangan latihan pagi: boneka jerami, target panah, shuriken, gerbang desa |
+| Versus | `assets/modes/versus.jpg` | 640×320 | 52 KB | Duel 1v1: dua siluet ninja (petir biru vs api oranye), ledakan di tengah |
+| War | — | — | — | **BELUM ADA** (lihat catatan di bawah) |
+| Survival | — | — | — | **BELUM ADA** (lihat catatan di bawah) |
+
+> Catatan: `modes/war.jpg` & `modes/survival.jpg` **gagal dibuat**
+> pada 2026-10-06 — generator gambar menolak prompt-nya (kebijakan konten
+> alat). Art lead tidak mengulanginya (aturan: jangan bypass penolakan).
+> Opsi: tim kode pakai placeholder sementara (mis. pakai ulang
+> `versus.jpg` untuk war & `title-bg.jpg` untuk survival), atau Bos
+> meminta ulang dengan konsep berbeda.
+
+### Latar layar judul
+
+| Aset | File | Dimensi | Ukuran | Catatan |
+|---|---|---|---|---|
+| Title background | `assets/title-bg.jpg` | 1024×341 | 47 KB | Panorama desa ninja saat senja: atap desa + gunung di tepi kiri-kanan, matahari oranye, **ruang gelap kosong di tengah** untuk logo + tombol |
+
+### Tekstur tanah arena (`assets/world/`)
+
+Tileable horizontal (mirror-blend, terverifikasi tak ada garis sambungan).
+
+| Arena | File | Dimensi | Ukuran |
+|---|---|---|---|
+| Konoha | `assets/world/konoha_ground.jpg` | 1024×341 | 37 KB |
+| Lembah | `assets/world/lembah_ground.jpg` | 1024×341 | 50 KB |
+| Akatsuki | `assets/world/akatsuki_ground.jpg` | 1024×341 | 37 KB |
+
+### Monumen (tower ala referensi)
+
+Bentuk sesuai screenshot referensi: **monumen batu pendek (bukan menara
+tinggi) dengan semak di sekelilingnya**, tampak samping, bg `#FF00FF`
+murni (chroma-key, 0 piksel bocor terverifikasi).
+
+| Aset | File | Dimensi | Ukuran |
+|---|---|---|---|
+| Monumen utuh | `assets/world/monument.png` | 480×480 | 53,9 KB |
+| Monumen hancur | `assets/world/monument_broken.png` | 448×448 | 49,5 KB |
+
+### Prajurit minion (`assets/world/`)
+
+Strip 4 frame jalan, chibi anime menghadap kanan, bg `#FF00FF` murni.
+Beda warna tim: biru (sekutu) vs merah tua (musuh).
+
+| Tim | File | Dimensi (4 frame) | Ukuran |
+|---|---|---|---|
+| Sekutu | `assets/world/soldier_ally.png` | 480×160 (4 × 120×160) | 22,2 KB |
+| Musuh | `assets/world/soldier_foe.png` | 480×160 (4 × 120×160) | 22,8 KB |
+
+### NPC (`assets/npc/`)
+
+Strip idle (napas) 4 frame, bg `#FF00FF` murni. Catatan: repo sudah punya
+varian lama `assets/world/npc/npc_villager.png` & `npc_guard.png`
+(2026-10-05); versi baru ini dibuat per spesifikasi art batch ini dengan
+nama file sesuai kontrak tim kode — tim kode memutuskan mana yang dipakai.
+
+| NPC | File | Dimensi (4 frame) | Ukuran |
+|---|---|---|---|
+| Warga desa | `assets/npc/villager.png` | 480×160 (4 × 120×160) | 24,4 KB |
+| Ninja penjaga | `assets/npc/guard.png` | 384×192 (4 × 96×192) | 26,9 KB |
+
 ## Suara
 
-Tidak ada file audio — semua suara (klik tombol, pukulan, ledakan,
-musik latar sederhana) dibuat **langsung via WebAudio** di `js/audio.js`
-(sintesis kode, tanpa sampel dari luar). Bebas lisensi.
+Tidak ada file audio bawaan — semua suara dibuat **langsung via WebAudio**
+di `js/audio.js` (sintesis kode, tanpa sampel dari luar). Bebas lisensi.
+
+- **BGM menu** — loop tenang tapi heroik: seruling + string lembut +
+  taiko pelan + choir pad tipis (komposisi original).
+- **BGM battle** — loop tempo cepat: taiko drive + riff string/brass
+  (komposisi original).
+- **Jingle victory** — one-shot heroik saat menang (komposisi original).
+- **SFX** — pukulan, jutsu (whoosh), ledakan, klik/hover UI.
+
+Seluruh komposisi musik adalah **karya original** — bukan kutipan OST
+Naruto/Naruto Shippuden atau karya Yasuharu Takanashi; hanya *gaya*-nya
+yang mirip (orkestra pertempuran: taiko, seruling Jepang, string, brass,
+choir).
+
+### File musik opsional (`assets/music/`)
+
+Folder ini boleh diisi file MP3 **legal** (milik sendiri / lisensi bebas):
+
+| File | Dipakai saat |
+|---|---|
+| `menu.mp3` | Layar menu — loop |
+| `battle.mp3` | Selama pertarungan — loop |
+| `victory.mp3` | Jingle sekali-putar saat menang |
+
+Game mengecek (HEAD) apakah file ada: bila **ada** → file dipakai; bila
+**404** → synth bawaan yang dipakai. Cara mengganti: taruh file dengan
+nama persis di atas — tanpa ubah kode. Lihat `assets/music/README.md`.
+
+> **Hak cipta:** JANGAN menaruh OST Naruto / musik berhak cipta milik
+> orang lain di `assets/music/`.
+
+## Thumbnail stage (`assets/stages/`)
+
+Komposit dari art arena yang sudah ada (`assets/world/*_sky.jpg`,
+`*_mid_a.jpg`, `*_ground.jpg` digabung jadi satu scene 16:9). Dibuat
+dengan skrip PIL lokal — original, bebas dipakai.
+
+| Stage | Preview (640×360) | Thumbnail (320×180) |
+|---|---|---|
+| Gerbang Konoha | `assets/stages/konoha.jpg` (~35 KB) | `assets/stages/konoha_thumb.jpg` (~12 KB) |
+| Lembah Akhir | `assets/stages/lembah.jpg` (~46 KB) | `assets/stages/lembah_thumb.jpg` (~15 KB) |
+| Malam Akatsuki | `assets/stages/akatsuki.jpg` (~24 KB) | `assets/stages/akatsuki_thumb.jpg` (~8 KB) |
 
 ## Aset internet / pihak ketiga
 
