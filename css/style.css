@@ -58,7 +58,13 @@ html,body{height:100%;background:var(--black);overflow:hidden;font-family:var(--
   display:inline-flex;align-items:center;justify-content:center;touch-action:manipulation}
 .iconbtn svg{width:24px;height:24px}
 .iconbtn:active{transform:translateY(2px);box-shadow:none}
-.iconbtn.corner{position:absolute;top:calc(14px + var(--sat));right:calc(14px + var(--sar));z-index:5}
+/* ---------- sudut layar menu: kiri = kembali/brand, kanan = suara+orientasi ----------
+   Konsisten di SEMUA layar menu (audit ikon v15): touch target seragam 48px,
+   sejajar, absolute terhadap .screen (tidak ikut scroll panel), tak menutupi
+   konten karena konten panel terpusat. */
+.corners{position:absolute;top:calc(12px + var(--sat));z-index:30;display:flex;gap:10px;align-items:center}
+.corners-left{left:calc(12px + var(--sal))}
+.corners-right{right:calc(12px + var(--sar))}
 
 /* ---------- loading & splash ---------- */
 .load-box,.splash-box{text-align:center}
@@ -87,7 +93,7 @@ html,body{height:100%;background:var(--black);overflow:hidden;font-family:var(--
 
 /* ---------- judul ---------- */
 #screen-title{background:linear-gradient(rgba(8,10,22,.60),rgba(8,10,22,.93)),
-  url('assets/title-art.jpg?v=1') center/cover no-repeat}
+  url('../assets/title-art.jpg?v=1') center/cover no-repeat}
 .title-box{text-align:center;max-width:640px;padding:20px}
 .title-box .main-logo{margin-bottom:14px}
 .subtitle{color:#dfe6ff;margin:6px 0 22px;font-size:clamp(12px,2.8vw,18px);font-weight:600;
@@ -364,7 +370,9 @@ body.compactland .subtitle{margin:4px 0 14px}
 body.compactland .lab-badge{top:calc(8px + var(--sat));left:calc(8px + var(--sal));padding:3px 10px 3px 3px}
 body.compactland .lab-badge img{width:26px;height:26px}
 body.compactland .title-footer{bottom:calc(6px + var(--sab))}
-body.compactland .iconbtn.corner{top:calc(8px + var(--sat));right:calc(8px + var(--sar))}
+body.compactland .corners{top:calc(8px + var(--sat))}
+body.compactland .corners-left{left:calc(8px + var(--sal))}
+body.compactland .corners-right{right:calc(8px + var(--sar))}
 
 /* loading & splash dipadatkan */
 body.compactland .main-logo.med{width:min(220px,36vh)}
@@ -376,23 +384,42 @@ body.compactland .splash-title{margin:4px 0 8px}
 /* layar akhir: tetap di tengah, tombol tak menabrak judul */
 body.compactland #screen-end .title-box{padding:8px}
 
-/* ============ FIX v14: tombol kembali ikon + audit portrait 360px ============
-   - .backbtn: tombol kembali kecil (panah kiri SVG) absolute kiri-atas tiap .panel
-   - .panel position:relative agar backbtn jadi acuan posisi
-   - .iconbtn.corner-l: tombol orientasi di layar judul (kiri tombol mute)
+/* ============ v15: sistem sudut .corners (menggantikan .backbtn/.corner/.corner-l) ============
+   - .corners-left: tombol kembali (panah kiri SVG) — absolute kiri-atas tiap .screen
+   - .corners-right: suara + orientasi — absolute kanan-atas SEMUA layar menu
+   - 48px touch target seragam; tak ikut scroll; tak menutupi konten terpusat
    - .diff-row boleh wrap di layar sangat sempit (anti overflow) */
 .panel{position:relative}
-.backbtn{position:absolute;top:10px;left:10px;z-index:6;width:44px;height:44px}
-.backbtn svg{width:22px;height:22px}
-.iconbtn.corner-l{position:absolute;top:calc(14px + var(--sat));right:calc(74px + var(--sar));z-index:5}
 .diff-row{flex-wrap:wrap}
 @media (max-width:420px){
   /* mode-grid 2 kolom sudah ada; pastikan kartu mode muat & tak kepotong */
   .mode-grid{gap:8px}
   .mode-card{padding:14px 6px}
   .mode-card p{font-size:11px}
-  /* tombol orientasi judul: rapat di samping tombol mute */
-  .iconbtn.corner-l{top:calc(14px + var(--sat));right:calc(68px + var(--sar))}
 }
-body.compactland .iconbtn.corner-l{top:calc(8px + var(--sat));right:calc(64px + var(--sar))}
-body.compactland .backbtn{top:6px;left:6px;width:40px;height:40px}
+/* (aturan sudut .corners versi kompak ada di atas) */
+
+/* ============ v15: MENU PAUSE ============
+   Overlay gelap + blur, panel scale/fade mulus. z-index 50: di atas HUD (10)
+   & layar (20), di bawah toast (60). */
+#pause-overlay{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
+  background:rgba(4,6,14,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  opacity:0;visibility:hidden;transition:opacity .22s ease,visibility .22s;
+  padding:calc(16px + var(--sat)) calc(16px + var(--sar)) calc(16px + var(--sab)) calc(16px + var(--sal))}
+#pause-overlay.show{opacity:1;visibility:visible}
+.pause-panel{width:min(340px,88vw);max-height:calc(100dvh - var(--sat) - var(--sab) - 32px);overflow-y:auto;
+  background:linear-gradient(180deg,var(--metal1),var(--metal2));
+  border:2px solid #4a5578;border-radius:18px;padding:22px 20px;text-align:center;
+  box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 24px rgba(255,122,26,.12);
+  transform:scale(.92) translateY(10px);transition:transform .22s ease;touch-action:pan-y}
+#pause-overlay.show .pause-panel{transform:none}
+.pause-panel h2{font-family:var(--font-d);color:var(--gold);letter-spacing:4px;
+  font-size:clamp(20px,5vw,28px);margin-bottom:16px;text-shadow:0 3px 0 rgba(0,0,0,.5)}
+.pause-panel .btn{width:100%;margin:0 0 10px}
+.pause-row{display:flex;align-items:center;justify-content:space-between;
+  padding:8px 4px;margin-top:2px;border-top:1px solid rgba(255,255,255,.08)}
+.pause-row span{font-weight:800;letter-spacing:2px;color:#dfe6ff;font-size:clamp(12px,2.6vw,14px)}
+/* landscape pendek: panel pause dipadatkan */
+body.compactland .pause-panel{padding:14px 16px}
+body.compactland .pause-panel h2{margin-bottom:10px}
+body.compactland .pause-panel .btn{margin-bottom:8px}
