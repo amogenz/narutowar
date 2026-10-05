@@ -29,20 +29,39 @@ const G={
   waveT:0,survT:0,survWave:0,input:{x:0,y:0},
   kills:[0,0],coins:0,banner:null,bannerT:0,
   onEnd:null,imgs:{},ambientT:0,
+  /* kualitas adaptif: 0=penuh, 1=hemat, 2=minimal (diatur perfSample di loop) */
+  perf:{ema:16.7,level:0,bad:0,good:0},
   /* art dunia: preload sekali, prerender ke offscreen, fallback prosedural */
   world:{pre:null,ready:false,arena:{},decor:{},amb:{},struct:{},dummy:null,dummyHit:null,minion:{}},
   amb:[],clouds:[] // pool partikel ambient (maks 40, tanpa alokasi di loop) + awan langit
 };
 
-/* ---------- scaling: canvas = viewport x dpr (max 2), dunia logis 960x540 ----------
- * fitView(cw,ch,dpr) murni (ada di NWSprite.fitScale bila sprite.js dimuat,
- * fallback lokal di sini agar game.js tetap jalan sendiri). */
+/* ---------- scaling: canvas = viewport x dpr (max 2) ----------
+ * Orientasi BEBAS (aturan Bos 2026-10-05): tanpa paksa landscape.
+ * Portrait: kamera 620px mengikuti pemain (aksi tetap terbaca),
+ * pita langit/tanah mengisi sisa vertikal. Landscape: letterbox 960x540. */
+function isPortrait(){return window.innerHeight>window.innerWidth;}
+function pViewW(){return isPortrait()?620:960;}
+/* objek view dipakai ulang tiap frame (tanpa alokasi di hot path) */
+const _view={s:1,ox:0,oy:0,portrait:false,vw:960};
 function fitView(cw,ch,dpr){
-  if(window.NWSprite&&NWSprite.fitScale)return NWSprite.fitScale(cw,ch,dpr);
-  var lw=cw/dpr,lh=ch/dpr;
-  var s=Math.min(lw/960,lh/540);
-  return{s:s,ox:(lw-960*s)/2,oy:(lh-540*s)/2};
+  var portrait=isPortrait(),r=_view;
+  if(!portrait&&window.NWSprite&&window.NWSprite.fitScale){
+    var f=window.NWSprite.fitScale(cw,ch,dpr);
+    r.s=f.s;r.ox=f.ox;r.oy=f.oy;
+  }else{
+    var lw=cw/dpr,lh=ch/dpr;
+    if(portrait){var s=lw/620;r.s=s;r.ox=0;r.oy=Math.max(0,(lh-540*s)/2);}
+    else{var s2=Math.min(lw/960,lh/540);r.s=s2;r.ox=(lw-960*s2)/2;r.oy=(lh-540*s2)/2;}
+  }
+  r.portrait=portrait;r.vw=portrait?620:960;
+  return r;
 }
+/* buffer entitas render dipakai ulang (tanpa new Array + tanpa closure sort per frame) */
+const _ents=[];
+function byY(a,b){return a.y-b.y;}
+/* gradien vignette di-cache per lebar viewport (bukan dibuat per frame) */
+let _vigGrad=null,_vigVw=0;
 function resize(){
   var dpr=Math.min(window.devicePixelRatio||1,2);
   var cw=Math.max(2,Math.round(window.innerWidth*dpr));
@@ -51,7 +70,9 @@ function resize(){
   G.dpr=dpr;
 }
 function rnd(a,b){return a+Math.random()*(b-a);}
-function dist(a,b){const dx=a.x-b.x,dy=a.y-b.y;return Math.hypot(dx,dy);}
+function dist(a,b){const dx=a.x-b.x,dy=a.y-b.y;return Math.sqrt(dx*dx+dy*dy);}
+/* versi tanpa alokasi untuk cek radius (Math.hypot ~2x lebih lambat dari sqrt manual) */
+function inR(x,y,e,r){const dx=e.x-x,dy=e.y-y;return dx*dx+dy*dy<r*r;}
 function clamp(v,a,b){return v<a?a:(v>b?b:v);}
 function diffMul(){return G.difficulty==='hard'?1.3:1;}
 
@@ -167,6 +188,14 @@ function buildLayers(){
     g.beginPath();g.arc(x,LANE_TOP-78,6,0,7);g.fill();
   }
   G.layers={sky,far,mid,gnd,_proc:!WA};
+  /* pita portrait: gradien langit & tanah (rentang tetap, dibuat sekali per arena) */
+  const bx=mkCanvas(4,4).getContext('2d');
+  const gt=bx.createLinearGradient(0,-800,0,0);
+  gt.addColorStop(0,A.sky[0]);gt.addColorStop(1,A.sky[1]);
+  G.bandTop=gt;
+  const gb=bx.createLinearGradient(0,540,0,1400);
+  gb.addColorStop(0,A.ground[1]);gb.addColorStop(1,'#141a28');
+  G.bandBot=gb;
   /* awan bergerak (strip cloud.png 4 frame @160px) — 3 sprite melayang di langit */
   G.clouds=[];
   const cc=G.world.amb.cloud;
@@ -297,19 +326,27 @@ function decorateGround(){
     if(frame){g.fillStyle='#5e4630';g.fillRect(x-8,y-8,w+16,h+16);
       g.fillStyle='#2c1f14';g.fillRect(x-4,y-4,w+8,h+8);}
     g.drawImage(im,x,y,w,h);};
-  const putK=(cv,x,y,w,h)=>{ // canvas hasil chroma-key (tanpa naturalWidth)
+  const putK=(cv,x,y,w,h,frame)=>{ // canvas hasil chroma-key (tanpa naturalWidth)
     if(!cv||!cv.width)return;
+    if(frame){g.fillStyle='#5e4630';g.fillRect(x-8,y-8,w+16,h+16);
+      g.fillStyle='#2c1f14';g.fillRect(x-4,y-4,w+8,h+8);}
     g.drawImage(cv,x,y,w,h);};
-  put(I.pain,700,170,96,128,true);
-  put(I.zetsu,1604,170,96,128,true);
-  const banners=[[I.nahwuos,350],[I.aksara,2050],[I.spec,950],[I.mynahwu,1450]];
+  /* RAPIDAN QA 2026-10-05: SEMUA dekorasi dipindah ke ATAS lane (y 80-184,
+   * di atas LANE_TOP=190) atau dekat base — tak ada lagi di area aksi tengah
+   * (x 800-1600, y 190-500). Bingkai kayu seragam ala baliho; border hijau
+   * mentah + tiang di tengah lane DIHAPUS. Tak overlap spawn (175,345) & tower. */
+  /* baliho Pain & Zetsu: dekat base masing-masing, di atas lane */
+  put(I.pain,150,84,72,96,true);
+  put(I.zetsu,2166,84,72,96,true);
+  /* 4 spanduk logo: bingkai kayu (dulu border hijau mentah + tiang y 240-320
+   * di tengah lane); kini plakat kayu digantung di atas lane, tanpa tiang */
+  const banners=[[I.nahwuos,420],[I.spec,950],[I.mynahwu,1450],[I.aksara,1980]];
   for(const [im,x] of banners){
     if(!im||!im.naturalWidth||im._drawn)continue;im._drawn=true;
-    g.fillStyle='#4a3520';g.fillRect(x-3,240,6,80);
-    g.drawImage(im,x-45,190,90,52);
-    g.strokeStyle='#22c55e';g.lineWidth=3;g.strokeRect(x-45,190,90,52);}
-  /* ---- dekorasi LAB baru dari art dunia ---- */
-  putK(D.banner_lab,1052,196,130,88);           // spanduk monogram A hijau neon
+    put(im,x-36,100,72,42,true);
+  }
+  /* spanduk monogram A LAB: tengah atas (dulu di 1052,196 = area aksi) */
+  putK(D.banner_lab,1148,100,104,70,true);
   for(const lx of [560,1840]){                  // lampion gantung di tiang kayu
     g.fillStyle='#3a2c1c';g.fillRect(lx-3,LANE_TOP-84,6,84);
     g.fillStyle='#241a10';g.fillRect(lx-16,LANE_TOP-90,32,6);
@@ -317,7 +354,8 @@ function decorateGround(){
   }
   if(G.arena!=='akatsuki'){                     // pohon sakura (bukan di malam Akatsuki)
     putK(D.sakura_tree,236,LANE_TOP-104,100,98);
-    putK(D.sakura_tree,2164,LANE_TOP-104,100,98);
+    /* kanan digeser 2164->2040 agar tak tumpuk baliho Zetsu */
+    putK(D.sakura_tree,2040,LANE_TOP-104,100,98);
   }
 }
 
@@ -339,7 +377,7 @@ function makeMinion(team,strong){
   return{kind:'minion',team,
     x:baseX+rnd(-20,20),y:rnd(LANE_TOP+40,LANE_BOT-40),dir:team===0?1:-1,
     ch:{body:team===0?'#3a6bd8':'#d83a3a',head:'#e8b98d',accent:'#222'},charId:'genin',
-    hp:strong?70:34,maxhp:strong?70:34,atk:strong?10:5,
+    hp:strong?70:34,maxhp:strong?70:34,atk:strong?8:4,
     speed:rnd(1.4,1.9),atkCd:0,animT:rnd(0,6),pose:'run',pt:0,
     alive:true,life:strong?10:9999,kbx:0,kby:0,
     color:team===0?'#3a6bd8':'#d83a3a'};
@@ -352,24 +390,31 @@ function makeDummy(){
     guard:100,guardMax:100,guardBreakT:0,hitT:-9};
 }
 function makeTower(team,x,inner){
+  /* balance QA: struktur lebih alot agar pacing tak terlalu cepat (tower+base
+     tak hancur dalam 1-2 menit saat pemain idle) */
   return{kind:'tower',team,x,y:(LANE_TOP+LANE_BOT)/2,inner:!!inner,
-    hp:170,maxhp:170,range:230,atkCd:0,alive:true,dir:team===0?1:-1};
+    hp:260,maxhp:260,range:230,atkCd:0,alive:true,dir:team===0?1:-1};
 }
 function makeBase(team){
   const x=team===0?60:WORLD_W-60;
-  return{kind:'base',team,x,y:(LANE_TOP+LANE_BOT)/2,hp:320,maxhp:320,alive:true,dir:team===0?1:-1};
+  return{kind:'base',team,x,y:(LANE_TOP+LANE_BOT)/2,hp:480,maxhp:480,alive:true,dir:team===0?1:-1};
 }
 
 /* ---------- partikel & teks ---------- */
+/* degradasi adaptif (diatur G.perf.level oleh perfSample):
+ * level 0=penuh, 1=hemat (partikel x0.5), 2=minimal (partikel x0.25, tanpa awan/vignette) */
+const QPART=[1,0.5,0.25],QMAXP=[MAX_PART,140,90],QAMB=[0.3,0.7,1.4];
 function puff(x,y,color,n,spd,life,size){
-  for(let i=0;i<(n||8);i++){
+  n=Math.max(1,Math.round((n||8)*QPART[G.perf.level]));
+  const cap=QMAXP[G.perf.level];
+  for(let i=0;i<n;i++){
     const q=pnew();if(!q)continue;
     const a=rnd(0,Math.PI*2),s=rnd(spd||1,(spd||1)*2.2);
     q.x=x;q.y=y;q.vx=Math.cos(a)*s;q.vy=Math.sin(a)*s;
     q.life=rnd(life||.4,(life||.4)*1.6);q.maxlife=life||.5;q.color=color;
     q.size=rnd(size||2,(size||2)*2);q.grav=2.5;
     G.parts.push(q);
-    if(G.parts.length>=MAX_PART)pfree(G.parts.shift());
+    if(G.parts.length>=cap)pfree(G.parts.shift());
   }
 }
 function ftext(x,y,str,color,size){
@@ -448,15 +493,22 @@ function heal(t,amt){
 
 /* ---------- skill ---------- */
 function foesOf(team){return team===0?1:0;}
+/* pool array hasil enemiesNear (2 slot + depth guard): semua pemanggil memakai
+ * hasil secara sinkron & tak bersarang ( diverifikasi: damage()/puff()/banner()
+ * tak memanggil enemiesNear), jadi tanpa alokasi array per panggilan. */
+const _nearPool=[[],[]];
+let _nearDepth=0;
 function enemiesNear(x,y,r,team,incStruct){
-  const out=[];
-  for(const h of G.fighters)if(h.alive&&h.team!==team&&dist({x,y},h)<r)out.push(h);
-  for(const m of G.minions)if(m.alive&&m.team!==team&&dist({x,y},m)<r)out.push(m);
-  if(G.dummy&&G.dummy.alive&&team===0&&dist({x,y},G.dummy)<r)out.push(G.dummy);
+  const out=_nearDepth<_nearPool.length?_nearPool[_nearDepth++]:[];
+  out.length=0;
+  for(const h of G.fighters)if(h.alive&&h.team!==team&&inR(x,y,h,r))out.push(h);
+  for(const m of G.minions)if(m.alive&&m.team!==team&&inR(x,y,m,r))out.push(m);
+  if(G.dummy&&G.dummy.alive&&team===0&&inR(x,y,G.dummy,r))out.push(G.dummy);
   if(incStruct){
-    for(const t of G.towers)if(t.alive&&t.team!==team&&dist({x,y},t)<r+30)out.push(t);
-    for(const b of G.bases)if(b.alive&&b.team!==team&&dist({x,y},b)<r+40)out.push(b);
+    for(const t of G.towers)if(t.alive&&t.team!==team&&inR(x,y,t,r+30))out.push(t);
+    for(const b of G.bases)if(b.alive&&b.team!==team&&inR(x,y,b,r+40))out.push(b);
   }
+  _nearDepth--;
   return out;
 }
 function fireProj(o){
@@ -604,12 +656,13 @@ function aiControl(h,dt){
   if(!h.alive||h.stun>0)return;
   const foe=foesOf(h.team);
   let best=null,bd=1e9;
-  const consider=(e,w)=>{const d=dist(h,e)*w;if(d<bd){bd=d;best=e;}};
-  for(const e of G.fighters)if(e!==h&&e.alive&&e.team===foe)consider(e,1);
-  for(const m of G.minions)if(m.alive&&m.team===foe)consider(m,G.mode==='survival'?0.7:1.3);
-  if(G.dummy&&G.dummy.alive&&h.team===0)consider(G.dummy,1);
-  for(const t of G.towers)if(t.alive&&t.team===foe)consider(t,1.6);
-  for(const b of G.bases)if(b.alive&&b.team===foe)consider(b,2.2);
+  /* cari target terdekat (loop inline, tanpa closure — hot path AI) */
+  for(const e of G.fighters)if(e!==h&&e.alive&&e.team===foe){const d=dist(h,e);if(d<bd){bd=d;best=e;}}
+  const mw=G.mode==='survival'?0.7:1.3;
+  for(const m of G.minions)if(m.alive&&m.team===foe){const d=dist(h,m)*mw;if(d<bd){bd=d;best=m;}}
+  if(G.dummy&&G.dummy.alive&&h.team===0){const d=dist(h,G.dummy);if(d<bd){bd=d;best=G.dummy;}}
+  for(const t of G.towers)if(t.alive&&t.team===foe){const d=dist(h,t)*1.6;if(d<bd){bd=d;best=t;}}
+  for(const b of G.bases)if(b.alive&&b.team===foe){const d=dist(h,b)*2.2;if(d<bd){bd=d;best=b;}}
   h.target=best;
   const lowHp=h.hp<h.maxhp*0.28;
   let mx=0,my=0;
@@ -632,11 +685,15 @@ function aiControl(h,dt){
 }
 function moveHero(h,mx,my,dt){
   const sp=h.ch.speed*(h.buff>0?1.5:1);
+  /* k=dt*60: gerak per-step diskala waktu. Pada fixed-step 1/60 k=1 (identik
+   * seperti dulu); pada variable-step (catch-up anti slow-motion) gerak tetap
+   * benar — tidak melambat maupun melompat. */
+  const k=dt*60;
   // dash
   if(h.dashT>0){
     h.dashT-=dt;
-    h.x=clamp(h.x+h.dashDx,40,WORLD_W-40);
-    h.y=clamp(h.y+h.dashDy,LANE_TOP+14,LANE_BOT-10);
+    h.x=clamp(h.x+h.dashDx*k,40,WORLD_W-40);
+    h.y=clamp(h.y+h.dashDy*k,LANE_TOP+14,LANE_BOT-10);
     if(h.dashDmg>0){ // dash serang: lukai yg tersentuh
       for(const e of enemiesNear(h.x,h.y,44,h.team,true)){
         if(!h.dashHit.includes(e)){h.dashHit.push(e);damage(e,h.dashDmg,h);}
@@ -645,8 +702,8 @@ function moveHero(h,mx,my,dt){
     }
     setPose(h,'run');
   }else{
-    h.x=clamp(h.x+mx*sp+(h.kbx||0)*dt*8,40,WORLD_W-40);
-    h.y=clamp(h.y+my*sp+(h.kby||0)*dt*8,LANE_TOP+14,LANE_BOT-10);
+    h.x=clamp(h.x+mx*sp*k+(h.kbx||0)*dt*8,40,WORLD_W-40);
+    h.y=clamp(h.y+my*sp*k+(h.kby||0)*dt*8,LANE_TOP+14,LANE_BOT-10);
   }
   h.kbx=(h.kbx||0)*Math.pow(0.02,dt);h.kby=(h.kby||0)*Math.pow(0.02,dt);
   if(Math.abs(h.kbx)<2)h.kbx=0;if(Math.abs(h.kby)<2)h.kby=0;
@@ -661,23 +718,23 @@ function minionAI(m,dt){
   if(m.life<9000){m.life-=dt;if(m.life<=0){m.alive=false;puff(m.x,m.y-16,'#fff',8,2,.4,3);return;}}
   const foe=foesOf(m.team);
   let best=null,bd=1e9;
-  const consider=e=>{const d=dist(m,e);if(d<bd){bd=d;best=e;}};
-  for(const e of G.fighters)if(e.alive&&e.team===foe)consider(e);
-  for(const n of G.minions)if(n.alive&&n.team===foe)consider(n);
-  if(G.dummy&&G.dummy.alive&&m.team===0)consider(G.dummy);
-  for(const t of G.towers)if(t.alive&&t.team===foe)consider(t);
-  for(const b of G.bases)if(b.alive&&b.team===foe)consider(b);
+  for(const e of G.fighters)if(e.alive&&e.team===foe){const d=dist(m,e);if(d<bd){bd=d;best=e;}}
+  for(const n of G.minions)if(n.alive&&n.team===foe){const d=dist(m,n);if(d<bd){bd=d;best=n;}}
+  if(G.dummy&&G.dummy.alive&&m.team===0){const d=dist(m,G.dummy);if(d<bd){bd=d;best=G.dummy;}}
+  for(const t of G.towers)if(t.alive&&t.team===foe){const d=dist(m,t);if(d<bd){bd=d;best=t;}}
+  for(const b of G.bases)if(b.alive&&b.team===foe){const d=dist(m,b);if(d<bd){bd=d;best=b;}}
   if(best){
     const d=dist(m,best);
     if(d<46){
       if(m.atkCd<=0){m.atkCd=0.8;damage(best,m.atk,m);puff(best.x,best.y-20,'#fff',3,1.5,.25,2);}
       m.dir=best.x>=m.x?1:-1;
     }else{
+      const k=dt*60; // skala gerak waktu (lihat moveHero)
       const dx=(best.x-m.x)/d,dy=(best.y-m.y)/d;
-      m.x+=dx*m.speed+(m.kbx||0)*dt*8;m.y=clamp(m.y+dy*m.speed,LANE_TOP+10,LANE_BOT-8);
+      m.x+=dx*m.speed*k+(m.kbx||0)*dt*8;m.y=clamp(m.y+dy*m.speed*k,LANE_TOP+10,LANE_BOT-8);
       m.dir=dx>=0?1:-1;m.animT+=dt*1.4;m.pose='run';
     }
-  }else{m.x+=m.dir*m.speed;m.animT+=dt*1.4;m.x=clamp(m.x,40,WORLD_W-40);}
+  }else{m.x+=m.dir*m.speed*dt*60;m.animT+=dt*1.4;m.x=clamp(m.x,40,WORLD_W-40);}
   m.kbx=(m.kbx||0)*0.9;
   if(m.atkCd>0)m.atkCd-=dt;
 }
@@ -703,8 +760,9 @@ function inChakraZone(h){
 }
 /* partikel, teks melayang, kilatan, shake — tetap jalan saat hitstop */
 function updateFx(dt){
+  const k=dt*60; // gerak partikel diskala waktu (konsisten di fixed & variable step)
   for(let i=G.parts.length-1;i>=0;i--){const q=G.parts[i];
-    q.x+=q.vx;q.y+=q.vy;q.vy+=(q.grav||2.5)*dt;q.life-=dt;
+    q.x+=q.vx*k;q.y+=q.vy*k;q.vy+=(q.grav||2.5)*dt;q.life-=dt;
     if(q.life<=0){G.parts.splice(i,1);pfree(q);}}
   for(let i=G.texts.length-1;i>=0;i--){const t=G.texts[i];
     t.y-=30*dt;t.life-=dt*0.9;if(t.life<=0)G.texts.splice(i,1);}
@@ -722,7 +780,7 @@ function update(dt){
   if(G.hitstop>0){G.hitstop-=dt;updateFx(dt);return;}
   // ambient arena: strip 4-frame via pool (tanpa alokasi, tanpa shadowBlur); awan melayang
   G.ambientT-=dt;
-  if(G.ambientT<=0){G.ambientT=0.3;spawnAmbient();}
+  if(G.ambientT<=0){G.ambientT=QAMB[G.perf.level];spawnAmbient();}
   updateAmbient(dt);
   if(G.clouds)for(const c of G.clouds){c.ft+=dt*3;c.x-=c.spd*dt;
     if(c.x<-230){c.x=W+rnd(0,240);c.y=rnd(30,150);}}
@@ -750,9 +808,10 @@ function update(dt){
     }
   }
   // pemain: gerak manual + 100% MANUAL attack (tanpa auto-attack)
+  // IN = snapshot input per frame render (diisi loop()/_tick), bukan G.input langsung
   const p=G.player;
   if(p&&p.alive&&p.stun<=0){
-    moveHero(p,G.input.x,G.input.y,dt);
+    moveHero(p,IN.x,IN.y,dt);
   }
   // (serangan pemain via NWGame.playerAttack() dari tombol/keyboard)
   // AI semua fighter non-pemain
@@ -795,7 +854,7 @@ function update(dt){
   // proyektil
   for(let i=G.projs.length-1;i>=0;i--){
     const pr=G.projs[i];
-    pr.x+=pr.vx;pr.y+=pr.vy;pr.life-=dt;
+    pr.x+=pr.vx*dt*60;pr.y+=pr.vy*dt*60;pr.life-=dt;
     let dead=pr.life<=0||pr.x<-50||pr.x>WORLD_W+50;
     if(!dead){
       const hit=enemiesNear(pr.x,pr.y,pr.radius+pr.hitR,pr.team,true);
@@ -828,7 +887,7 @@ function update(dt){
     if(z.dur<=0)G.zones.splice(i,1);
   }
   updateFx(dt);
-  if(p&&p.alive)G.cam=clamp(p.x-W/2,0,WORLD_W-W);
+  if(p&&p.alive)G.cam=clamp(p.x-pViewW()/2,0,WORLD_W-pViewW());
 }
 
 /* ---------- gambar ---------- */
@@ -879,7 +938,7 @@ function drawFighter(g,e){
  * Offset 15-22px di atas puncak -> aman dari rambut/ikat kepala. */
 function afterSpriteBars(g,e){
   if(e.kind==='hero'){
-    drawHPBar(g,e.x,e.y-152,64,e.hp/e.maxhp);          // -152..-142 (22px di atas puncak)
+    drawHPBar(g,e.x,e.y-172,64,e.hp/e.maxhp);          // -172..-162 (20px di atas puncak kepala)
     g.fillStyle='rgba(0,0,0,.55)';g.fillRect(e.x-32,e.y-140,64,5);
     g.fillStyle='#2ea8ff';g.fillRect(e.x-31,e.y-139,62*(e.chakra/e.maxchakra),3);
   }else drawHPBar(g,e.x,e.y-124,34,e.hp/e.maxhp);      // -124..-114 (16px di atas kepala minion)
@@ -994,20 +1053,28 @@ function drawBase(g,b){
 function render(){
   const g=G.ctx,L=G.layers;
   const cw=G.canvas.width,ch=G.canvas.height;
-  /* letterbox: canvas = viewport x dpr, dunia logis 960x540 di tengah */
+  /* letterbox landscape 960x540; portrait: kamera 620px + pita langit/tanah */
   const v=fitView(cw,ch,G.dpr);
+  G.vw=v.vw;G.portrait=v.portrait;
   g.setTransform(1,0,0,1,0,0);
   g.fillStyle='#000';g.fillRect(0,0,cw,ch);
   g.setTransform(G.dpr*v.s,0,0,G.dpr*v.s,G.dpr*v.ox,G.dpr*v.oy);
+  if(v.portrait){
+    /* pita di atas & bawah area dunia 540px (gradien per arena, dibuat di buildLayers) */
+    const topH=v.oy/v.s,botH=(ch/G.dpr-v.oy)/v.s-540;
+    if(topH>1){g.fillStyle=G.bandTop||'#000';g.fillRect(-2,-topH-2,v.vw+4,topH+2);}
+    if(botH>1){g.fillStyle=G.bandBot||'#000';g.fillRect(-2,540,v.vw+4,botH+2);}
+  }
   g.save();
   let sx=0,sy=0;
   if(G.shake>0){sx=rnd(-G.shake,G.shake)*0.4;sy=rnd(-G.shake,G.shake)*0.4;}
   const cam=Math.round(G.cam+sx);
   // langit tetap
   g.drawImage(L.sky,0,0);
-  // awan bergerak (strip cloud.png, 4 frame @160px) — hanya bila art siap
+  // awan bergerak (strip cloud.png, 4 frame @160px) — hanya bila art siap;
+  // dimatikan pada level kualitas hemat (level>=1) demi fill-rate HP
   const cl=G.world.amb.cloud;
-  if(cl&&cl.width&&G.clouds)for(const c of G.clouds){
+  if(G.perf.level<1&&cl&&cl.width&&G.clouds)for(const c of G.clouds){
     g.globalAlpha=0.85;
     g.drawImage(cl,Math.floor(c.ft)%4*160,0,160,160,c.x,c.y,200,200);
   }
@@ -1032,11 +1099,12 @@ function render(){
   for(const b of G.bases)drawBase(g,b);
   for(const t of G.towers)drawTower(g,t);
   if(G.dummy&&G.dummy.alive)drawDummy(g,G.dummy);
-  const ents=[];
-  for(const h of G.fighters)if(h.alive)ents.push(h);
-  for(const m of G.minions)if(m.alive)ents.push(m);
-  ents.sort((a,b)=>a.y-b.y);
-  for(const e of ents)drawFighter(g,e);
+  /* urut depth y: buffer dipakai ulang, tanpa alokasi array per frame */
+  _ents.length=0;
+  for(const h of G.fighters)if(h.alive)_ents.push(h);
+  for(const m of G.minions)if(m.alive)_ents.push(m);
+  _ents.sort(byY);
+  for(const e of _ents)drawFighter(g,e);
   for(const h of G.fighters)if(h.alive&&h.comboN>=2)drawCombo(g,h);
   /* kilatan FX jutsu (sprite bila ada, fallback lingkaran) */
   for(const f of G.flashes){
@@ -1100,125 +1168,182 @@ function render(){
       /* pop-in easeOutBack 0.25 dtk lalu menetap */
       const ein=Math.min(1,bAge*4);
       const pop=easeOutBack(ein);
-      g.translate(W/2,H*0.36);g.scale(pop,pop);
+      const bcx=(G.vw||960)/2;
+      g.translate(bcx,H*0.36);g.scale(pop,pop);
       outlined(G.banner.txt,0,0,'bold 72px Bungee,"Arial Black",sans-serif',13,'#ffd23e');
       if(G.banner.sub)outlined(G.banner.sub,0,54,'bold 22px Rajdhani,sans-serif',6,'#ffffff');
     }else{
-      outlined(G.banner.txt,W/2,H*0.36,'bold 46px Bungee,"Arial Black",sans-serif',9,'#ffd23e');
-      if(G.banner.sub)outlined(G.banner.sub,W/2,H*0.36+36,'bold 20px Rajdhani,sans-serif',5,'#ffffff');
+      const bcx2=(G.vw||960)/2;
+      outlined(G.banner.txt,bcx2,H*0.36,'bold 46px Bungee,"Arial Black",sans-serif',9,'#ffd23e');
+      if(G.banner.sub)outlined(G.banner.sub,bcx2,H*0.36+36,'bold 20px Rajdhani,sans-serif',5,'#ffffff');
     }
     g.restore();
     }
   }
-  const vg=g.createLinearGradient(0,0,W,0);
-  vg.addColorStop(0,'rgba(0,0,0,.25)');vg.addColorStop(.06,'rgba(0,0,0,0)');
-  vg.addColorStop(.94,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.25)');
-  g.fillStyle=vg;g.fillRect(0,0,W,H);
+  const _vw=G.vw||960;
+  /* vignette tepi: gradien di-cache (bukan createLinearGradient per frame),
+   * hanya setinggi area dunia 540px (dulu fillRect 1740px = overdraw ~3x layar).
+   * Level kualitas 2 (minimal): vignette dimatikan total. */
+  if(G.perf.level<2){
+    if(_vigGrad===null||_vigVw!==_vw){
+      _vigVw=_vw;
+      _vigGrad=g.createLinearGradient(0,0,_vw,0);
+      _vigGrad.addColorStop(0,'rgba(0,0,0,.25)');_vigGrad.addColorStop(.06,'rgba(0,0,0,0)');
+      _vigGrad.addColorStop(.94,'rgba(0,0,0,0)');_vigGrad.addColorStop(1,'rgba(0,0,0,.25)');
+    }
+    g.fillStyle=_vigGrad;g.fillRect(0,0,_vw,540);
+  }
   g.restore();
 }
 /* Status struktur kedua tim: IKON visual (bukan teks mentah).
  * Menara digambar sebagai menara kecil, base sebagai kristal; warna = warna tim
  * bila utuh, abu-abu + silang merah bila hancur; bar HP tipis + label kecil. */
-function structBars(g){
-  const teamCol=t=>t===0?'#3a6bd8':'#d83a3a';
-  const DEAD='#565660';
-  const drawTowerIcon=(x,y,s,color)=>{
-    const w=s*0.72,cx=x+w/2;
-    g.fillStyle='rgba(0,0,0,.55)';g.fillRect(x-3,y-3,w+6,s+8);
-    g.fillStyle=color;
-    g.fillRect(x,y+s*0.34,w,s*0.66);       /* badan menara */
-    g.fillRect(x-2,y+s*0.16,w+4,s*0.2);    /* mahkota */
-    g.fillRect(cx-2,y-1,4,s*0.2);          /* puncak */
-    g.fillStyle='rgba(0,0,0,.42)';
-    g.fillRect(cx-3,y+s*0.56,6,s*0.22);    /* pintu */
-  };
-  const drawBaseIcon=(x,y,s,color)=>{
-    const w=s*0.8,cx=x+w/2;
-    g.fillStyle='rgba(0,0,0,.55)';g.fillRect(x-3,y-3,w+6,s+8);
-    g.fillStyle=color;
-    g.beginPath();                        /* kristal */
-    g.moveTo(cx,y);g.lineTo(x+w,y+s*0.42);g.lineTo(cx,y+s);g.lineTo(x,y+s*0.42);
-    g.closePath();g.fill();
-    g.fillStyle='rgba(255,255,255,.45)';   /* kilau */
+/* ---- status struktur: helper di-hoist ke level modul (tanpa closure per frame) ---- */
+const TEAM_COL=['#3a6bd8','#d83a3a'],DEAD_COL='#565660';
+function drawTowerIcon(g,x,y,s,color){
+  const w=s*0.72,cx=x+w/2;
+  g.fillStyle='rgba(0,0,0,.55)';g.fillRect(x-3,y-3,w+6,s+8);
+  g.fillStyle=color;
+  g.fillRect(x,y+s*0.34,w,s*0.66);       /* badan menara */
+  g.fillRect(x-2,y+s*0.16,w+4,s*0.2);    /* mahkota */
+  g.fillRect(cx-2,y-1,4,s*0.2);          /* puncak */
+  g.fillStyle='rgba(0,0,0,.42)';
+  g.fillRect(cx-3,y+s*0.56,6,s*0.22);    /* pintu */
+}
+function drawBaseIcon(g,x,y,s,color){
+  const w=s*0.8,cx=x+w/2;
+  g.fillStyle='rgba(0,0,0,.55)';g.fillRect(x-3,y-3,w+6,s+8);
+  g.fillStyle=color;
+  g.beginPath();                        /* kristal */
+  g.moveTo(cx,y);g.lineTo(x+w,y+s*0.42);g.lineTo(cx,y+s);g.lineTo(x,y+s*0.42);
+  g.closePath();g.fill();
+  g.fillStyle='rgba(255,255,255,.45)';   /* kilau */
+  g.beginPath();
+  g.moveTo(cx,y);g.lineTo(x+w,y+s*0.42);g.lineTo(cx,y+s*0.42);
+  g.closePath();g.fill();
+  g.strokeStyle='rgba(0,0,0,.5)';g.lineWidth=1.5;
+  g.beginPath();g.moveTo(x,y+s*0.42);g.lineTo(x+w,y+s*0.42);g.stroke();
+}
+/* satu item: ikon + bar HP + label kecil. return lebar terpakai. */
+function structItem(g,x,team,align,label,ratio,alive,iconFn){
+  const s=16,bw=42;
+  const bx=align==='left'?x:x-bw;
+  const iy=84;
+  iconFn(g,bx,iy,s,alive?TEAM_COL[team]:DEAD_COL);
+  if(!alive){ /* silang merah = hancur */
+    g.strokeStyle='#ff5e5e';g.lineWidth=2.5;g.lineCap='round';
     g.beginPath();
-    g.moveTo(cx,y);g.lineTo(x+w,y+s*0.42);g.lineTo(cx,y+s*0.42);
-    g.closePath();g.fill();
-    g.strokeStyle='rgba(0,0,0,.5)';g.lineWidth=1.5;
-    g.beginPath();g.moveTo(x,y+s*0.42);g.lineTo(x+w,y+s*0.42);g.stroke();
-  };
-  /* satu item: ikon + bar HP + label kecil. return lebar terpakai. */
-  const item=(x,team,align,label,ratio,alive,iconFn)=>{
-    const s=16,bw=42;
-    const bx=align==='left'?x:x-bw;
-    const iy=84;
-    iconFn(bx,iy,s,alive?teamCol(team):DEAD);
-    if(!alive){ /* silang merah = hancur */
-      g.strokeStyle='#ff5e5e';g.lineWidth=2.5;g.lineCap='round';
-      g.beginPath();
-      g.moveTo(bx-2,iy-2);g.lineTo(bx+s*0.8+2,iy+s+2);
-      g.moveTo(bx+s*0.8+2,iy-2);g.lineTo(bx-2,iy+s+2);
-      g.stroke();
-    }
-    g.fillStyle='rgba(0,0,0,.6)';g.fillRect(bx,iy+s+5,bw,5);
-    g.fillStyle=ratio>0.5?'#37e05b':(ratio>0.25?'#ffd23e':'#ff5e5e');
-    g.fillRect(bx+1,iy+s+6,(bw-2)*clamp(ratio,0,1),3);
-    g.font='bold 8px sans-serif';g.textBaseline='alphabetic';
-    g.textAlign=align==='left'?'left':'right';
-    const lx=align==='left'?bx:bx+bw,ly=iy+s+20;
-    g.fillStyle='#000';g.fillText(label,lx+(align==='left'?1:-1),ly+1);
-    g.fillStyle=alive?'#fff':'#8a8a95';g.fillText(label,lx,ly);
-    return bw+10;
-  };
+    g.moveTo(bx-2,iy-2);g.lineTo(bx+s*0.8+2,iy+s+2);
+    g.moveTo(bx+s*0.8+2,iy-2);g.lineTo(bx-2,iy+s+2);
+    g.stroke();
+  }
+  g.fillStyle='rgba(0,0,0,.6)';g.fillRect(bx,iy+s+5,bw,5);
+  g.fillStyle=ratio>0.5?'#37e05b':(ratio>0.25?'#ffd23e':'#ff5e5e');
+  g.fillRect(bx+1,iy+s+6,(bw-2)*clamp(ratio,0,1),3);
+  g.font='bold 8px sans-serif';g.textBaseline='alphabetic';
+  g.textAlign=align==='left'?'left':'right';
+  const lx=align==='left'?bx:bx+bw,ly=iy+s+20;
+  g.fillStyle='#000';g.fillText(label,lx+(align==='left'?1:-1),ly+1);
+  g.fillStyle=alive?'#fff':'#8a8a95';g.fillText(label,lx,ly);
+  return bw+10;
+}
+function structBars(g){
   /* kiri: tim pemain — kanan: tim musuh (urutan: tower luar, tower dalam, base) */
   let lx=10;
-  const leftItems=[];
-  for(const t of G.towers)if(t.team===0)leftItems.push(['TOWER',t]);
-  for(const b of G.bases)if(b.team===0)leftItems.push(['BASE',b]);
-  for(const [label,o] of leftItems)
-    lx+=item(lx,0,'left',label,o.hp/o.maxhp,o.alive,label==='TOWER'?drawTowerIcon:drawBaseIcon);
-  let rx=W-10;
-  const rightItems=[];
-  for(const t of G.towers)if(t.team===1)rightItems.push(['TOWER',t]);
-  for(const b of G.bases)if(b.team===1)rightItems.push(['BASE',b]);
-  for(const [label,o] of rightItems)
-    rx-=item(rx,1,'right',label,o.hp/o.maxhp,o.alive,label==='TOWER'?drawTowerIcon:drawBaseIcon);
+  for(const t of G.towers)if(t.team===0)lx+=structItem(g,lx,0,'left','TOWER',t.hp/t.maxhp,t.alive,drawTowerIcon);
+  for(const b of G.bases)if(b.team===0)lx+=structItem(g,lx,0,'left','BASE',b.hp/b.maxhp,b.alive,drawBaseIcon);
+  let rx=(G.vw||960)-10;
+  for(const t of G.towers)if(t.team===1)rx-=structItem(g,rx,1,'right','TOWER',t.hp/t.maxhp,t.alive,drawTowerIcon);
+  for(const b of G.bases)if(b.team===1)rx-=structItem(g,rx,1,'right','BASE',b.hp/b.maxhp,b.alive,drawBaseIcon);
 }
+/* Minimap: peta garis lane + posisi tower/fighter + bingkai viewport.
+ * Dibuat terlihat "jadi" (bukan UI mentah): bingkai emas + sudut membulat. */
+function rr(g,x,y,w,h,r){
+  g.beginPath();
+  g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);
+  g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();
+}
+function mmX(mx,mw,x){return mx+(x/WORLD_W)*mw;} // tanpa closure per frame
 function minimap(g){
-  const mw=220,mh=26,mx=W/2-mw/2,my=40;
-  g.fillStyle='rgba(0,0,0,.55)';g.fillRect(mx,my,mw,mh);
-  g.strokeStyle='rgba(255,255,255,.5)';g.strokeRect(mx,my,mw,mh);
-  const px=x=>mx+(x/WORLD_W)*mw;
-  g.strokeStyle='rgba(255,255,255,.35)';g.beginPath();
-  g.moveTo(mx,my+mh/2);g.lineTo(mx+mw,my+mh/2);g.stroke();
+  const vw=G.vw||960;
+  const mw=220,mh=26,mx=vw/2-mw/2,my=40;
+  g.fillStyle='rgba(6,10,24,.72)';rr(g,mx,my,mw,mh,8);g.fill();
+  g.strokeStyle='rgba(255,210,62,.85)';g.lineWidth=1.5;rr(g,mx,my,mw,mh,8);g.stroke();
+  g.strokeStyle='rgba(255,255,255,.35)';g.lineWidth=1;g.beginPath();
+  g.moveTo(mx+6,my+mh/2);g.lineTo(mx+mw-6,my+mh/2);g.stroke();
   for(const t of G.towers)if(t.alive){
     g.fillStyle=t.team===0?'#6aa8ff':'#ff6a6a';
-    g.fillRect(px(t.x)-2,my+mh/2-2,4,4);
+    g.fillRect(mmX(mx,mw,t.x)-2,my+mh/2-2,4,4);
   }
   for(const h of G.fighters)if(h.alive){
     g.fillStyle=h.team===0?(h.isPlayer?'#ffd23e':'#6aa8ff'):'#ff6a6a';
-    g.beginPath();g.arc(px(h.x),my+mh/2+(h.y-345)/160*mh/2,h.isPlayer?3.5:2.5,0,7);g.fill();
+    g.beginPath();g.arc(mmX(mx,mw,h.x),my+mh/2+(h.y-345)/160*mh/2,h.isPlayer?3.5:2.5,0,7);g.fill();
   }
   // viewport
-  g.strokeStyle='#ffd23e';g.lineWidth=1;
-  g.strokeRect(px(G.cam),my,(W/WORLD_W)*mw,mh);
+  g.strokeStyle='#ffd23e';g.lineWidth=2;
+  g.strokeRect(mmX(mx,mw,G.cam)+1,my+4,(pViewW()/WORLD_W)*mw-2,mh-8);
 }
 
-/* ---------- loop ---------- */
+/* ---------- loop ----------
+ * Fixed timestep 1/60 + akumulator, MAKS 3 step per frame.
+ *
+ * PILIHAN DESAIN (temuan QA: timer game berjalan LEBIH LAMBAT dari waktu nyata):
+ * - DULU: dt di-clamp 0.05 DAN sisa akumulator DIBUANG saat 3 step habis
+ *   (if(n===3)G.acc=0). Akibat: tiap frame yang lebih lambat dari 50ms membuat
+ *   game-time kehilangan waktu nyata secara PERMANEN = efek slow-motion pada
+ *   timer, cooldown, dan seluruh gameplay. Inilah akar "timer lebih lambat".
+ * - SEKARANG: tetap maks 3 fixed step per frame (anti spiral-of-death), TAPI
+ *   sisa waktu TIDAK dibuang — dijalankan sebagai SATU variable-step
+ *   (maks 1/20 dtk). Semua gerak per-step sudah diskala dt*60 (moveHero,
+ *   minionAI, partikel, proyektil, dash) sehingga variable-step tetap benar
+ *   secara fisik. Hasil: game-time SELALU mengejar waktu nyata — tidak pernah
+ *   tertinggal permanen. Saat FPS rendah, game terasa responsif (bukan
+ *   slow-motion); simulasinya hanya sedikit lebih kasar di frame itu.
+ * - INPUT: joystick/keyboard ditulis ke G.input oleh event handler (ui.js).
+ *   Di sini input disnapshot SEKALI per frame render ke IN; semua fixed step
+ *   dalam frame yang sama memakai nilai identik — tidak ada input yang
+ *   "terjepit" berubah di tengah frame, dan tidak ada delay baca input
+ *   (input selalu segar per frame render, bukan per fixed step).
+ * - DEGRADASI ADAPTIF: perfSample melacak EMA frame time. Bila >20ms selama
+ *   ~45 frame berturut-turut, level kualitas naik: partikel x0.5 lalu x0.25
+ *   (lihat puff/QPART), spawn ambient direnggangkan (QAMB), awan langit
+ *   dimatikan (level>=1), vignette dimatikan (level 2). Pulih otomatis bila
+ *   EMA <14.5ms selama ~300 frame. */
+const STEP=1/60, MAX_STEPS=3;
+const IN={x:0,y:0}; // snapshot input per frame render
+function perfSample(dt){
+  const P=G.perf,ms=dt*1000;
+  P.ema+=(ms-P.ema)*0.06;
+  if(P.ema>20){
+    P.good=0;
+    if(++P.bad>45&&P.level<2){P.level++;P.bad=0;}
+  }else{
+    P.bad=0;
+    if(P.ema<14.5){if(++P.good>300&&P.level>0){P.level--;P.good=0;}}
+    else P.good=0;
+  }
+}
 function loop(ts){
   if(!G.running)return;
   requestAnimationFrame(loop);
-  const dt=Math.min(0.05,(ts-G.last)/1000||0.016);
+  let dt=(ts-G.last)/1000;
   G.last=ts;
+  if(!(dt>0))dt=STEP;else if(dt>0.25)dt=0.25; // guard tab-switch / hitch ekstrem
+  IN.x=G.input.x;IN.y=G.input.y; // baca input tiap frame render
+  perfSample(dt);
   if(!G.over){
     G.acc+=dt;let n=0;
-    while(G.acc>=1/60&&n<3){update(1/60);G.acc-=1/60;n++;}
-    if(n===3)G.acc=0;
+    while(G.acc>=STEP&&n<MAX_STEPS){update(STEP);G.acc-=STEP;n++;}
+    /* sisa < 1 step ATAU kelebihan dari batas 3 step: SATU variable-step,
+     * bukan dibuang (dulu: acc=0 -> slow-motion permanen). */
+    if(G.acc>=0.0008){update(Math.min(G.acc,1/20));G.acc=0;}
   }else{
     G.time+=dt;
     for(let i=G.delayed.length-1;i>=0;i--)
       if(G.time>=G.delayed[i].t){const d=G.delayed.splice(i,1)[0];d.fn();}
+    const k=dt*60;
     for(let i=G.parts.length-1;i>=0;i--){const q=G.parts[i];
-      q.x+=q.vx;q.y+=q.vy;q.vy+=(q.grav||2.5)*dt;q.life-=dt;
+      q.x+=q.vx*k;q.y+=q.vy*k;q.vy+=(q.grav||2.5)*dt;q.life-=dt;
       if(q.life<=0){G.parts.splice(i,1);pfree(q);}}
     for(let i=G.flashes.length-1;i>=0;i--){const f=G.flashes[i];
       f.t+=dt;if(f.t>=f.dur)G.flashes.splice(i,1);}
@@ -1256,12 +1381,17 @@ function start(cfg){
   if(G.mode==='survival'){G.bases=[makeBase(0)];G.towers=[makeTower(0,520,false),makeTower(0,1020,true)];G.survWave=0;G.survT=3;}
   G.time=0;G.waveT=2;G.over=false;G.winner=false;G.acc=0;G.shake=0;
   G.hitstop=0;G.koCd=0;
+  G.perf={ema:16.7,level:0,bad:0,good:0}; // reset degradasi adaptif tiap battle
   G.cam=0;G.kills=[0,0];G.coins=0;G.banner=null;G.bannerT=0;
   G.running=true;G.last=performance.now();
   // genta perang
   NWAudio.drum();
-  after(0.8,()=>{banner(G.mode==='training'?'LATIHAN DIMULAI!':'FIGHT!',
-    ARENAS[G.arena].name+' — '+ARENAS[G.arena].sub,true);NWAudio.drum();});
+  /* banner FIGHT! via wall-clock (bukan game-time) agar selalu muncul
+     walau FPS rendah / game-time berjalan lambat (temuan QA) */
+  setTimeout(()=>{if(G.running&&!G.over){
+    banner(G.mode==='training'?'LATIHAN DIMULAI!':'FIGHT!',
+      ARENAS[G.arena].name+' — '+ARENAS[G.arena].sub,true);NWAudio.drum();
+  }},900);
   requestAnimationFrame(loop);
 }
 function endGame(win){
@@ -1282,10 +1412,18 @@ window.NWGame={
   setInput(x,y){G.input.x=x;G.input.y=y;},
   resize(){resize();},
   _fitView:fitView,
-  _tick(dt){update(dt);}, // hook uji headless (Node)
+  _tick(dt){IN.x=G.input.x;IN.y=G.input.y;update(dt);}, // hook uji headless (Node)
+  _render(){render();}, // hook uji headless: render satu frame (untuk perf-audit)
   onEnd(fn){G.onEnd=fn;},
   getState(){return G;},
   stop(){G.running=false;},
+  /* bersihkan layar saat keluar ke menu (temuan QA: battlefield lama
+     masih terlihat di belakang judul) */
+  clearView(){
+    G.running=false;G.banner=null;G.bannerT=0;
+    if(G.canvas){const c=G.canvas.getContext('2d');
+      c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,G.canvas.width,G.canvas.height);}
+  },
   init(cv){
     G.canvas=cv;G.ctx=cv.getContext('2d');
     resize();
