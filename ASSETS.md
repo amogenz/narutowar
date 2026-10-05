@@ -74,6 +74,39 @@ Isi tiap arena: Konoha = langit siang + tebing patung Hokage + gerbang kayu
 air terjun & sungai; Akatsuki = langit malam + bulan merah besar + tebing
 gelap + pohon mati.
 
+## Lantai arena v15 (2026-10-06) — menggantikan flat color
+
+Dibuat via AI image generator (media pipeline) + post-processing
+(`assets/world/_process_v15.py`: crop 960×150 + **tileable horizontal**
+via crossfade ke salinan bergeser setengah lebar, kuantisasi palet
+dither=NONE). Gaya: cel-shading anime, outline hitam tegas, warna flat
+saturated — kohesif dengan `assets/sprites/STYLE_GUIDE.md`. Tidak ada yang
+diambil dari internet. File mentah: `assets/world/_gen3/`. Dirender engine
+di parallax 1x (lapisan paling depan, di bawah mid).
+
+| Arena | File | Dimensi | Ukuran | Isi |
+|---|---|---|---|---|
+| Konoha | `assets/world/konoha_ground.png` | 960×150 | 37,6 KB | jalan tanah terang + rumput tepi hijau + kerikil + kelopak sakura |
+| Lembah Akhir | `assets/world/lembah_ground.png` | 960×150 | 51,3 KB | tanah oranye senja + batu sungai abu + rumput liar |
+| Akatsuki | `assets/world/akatsuki_ground.png` | 960×150 | 44,7 KB | tanah malam biru-ungu + batu gelap + retakan merah menyala |
+
+## Dekorasi arena v15 (2026-10-06)
+
+Post-processing: `assets/world/_process_v15b.py` — normalisasi bg ke
+`#FF00FF` murni (flood hue 285–315) + trim + resize + kuantisasi dengan
+satu entri palet dipaksa `#FF00FF` persis. File mentah: `_gen3/`.
+
+| Dekorasi | File | Dimensi | Ukuran | Catatan |
+|---|---|---|---|---|
+| Gerbang torii kecil (Konoha) | `assets/world/konoha_torii.png` | 340×300 | 17,3 KB | bg `#FF00FF`, kayu merah-cokelat + tali shimenawa |
+| Semak sakura (Konoha) | `assets/world/konoha_sakura_bush.png` | 340×284 | 40,8 KB | bg `#FF00FF`, rumpun bunga sakura pink |
+| Batu sungai besar (Lembah) | `assets/world/lembah_boulder.png` | 340×255 | 21,0 KB | bg `#FF00FF`, batu oranye-abu + rumput di kaki |
+| Rumpun rumput liar (Lembah) | `assets/world/lembah_grass.png` | 300×299 | 27,3 KB | bg `#FF00FF`, ilalang + bunga kuning kecil |
+| Stalagmit gelap (Akatsuki) | `assets/world/akatsuki_stalagmite.png` | 300×383 | 26,1 KB | bg `#FF00FF`, 4 menara batu biru-ungu + retakan merah |
+| Tumpukan batu tajam (Akatsuki) | `assets/world/akatsuki_rockpile.png` | 320×286 | 21,5 KB | bg `#FF00FF`, batu angular + 1 retakan merah |
+
+## Dekorasi lama (v14)
+
 | Dekorasi | File | Dimensi | Ukuran | Catatan |
 |---|---|---|---|---|
 | Lampion merah | `assets/world/lantern.png` | 231×384 | 22,0 KB | bg `#FF00FF` |
@@ -107,6 +140,29 @@ sprite karakter).
 | Boneka kayu (terpukul) | `assets/world/dummy_hit.png` | 182×200 | 30,2 KB | miring + efek impact |
 | Minion genin tim biru | `assets/world/minion_ally.png` | 512×128 (4×128px) | 32,9 KB | chibi, ikat kepala biru, kunai |
 | Minion genin tim merah | `assets/world/minion_foe.png` | 512×128 (4×128px) | 35,2 KB | chibi, ikat kepala merah, kunai |
+
+## NPC dekorasi Konoha (original, 2026-10-06)
+
+Menggantikan placeholder stickman di area tepi/base. Hanya dekorasi —
+tidak mengganggu gameplay. Sheet horizontal, ukuran frame 64×96 px,
+kaki menapak di tepi bawah sel, background `#FF00FF` murni (chroma-key
+otomatis oleh `js/sprite.js`), tanpa teks & tanpa watermark. File mentah
+generator disimpan sementara di `/tmp/npc_gen/` (bukan repo);
+skrip post-processing: `/tmp/npc_build.py`.
+
+Metode: generate 1 gambar strip per aset via media pipeline
+(`media.generate_image`: prompt "sprite sheet ... cel-shading ... bold
+outline ... solid pure magenta #FF00FF background ... no text, no watermark"),
+lalu potong otomatis jadi sel 64×96 dengan PIL (deteksi kolom murni magenta,
+crop ketat karakter, paste kaki di bawah sel), normalisasi bg ke
+`#FF00FF` murni (aturan hue 285–315 seperti STYLE_GUIDE §5),
+simpan PNG palet `dither=NONE`.
+
+| NPC | File | Dimensi / frame | Ukuran | Frame & animasi |
+|---|---|---|---|---|
+| Warga desa (pria & wanita) | `assets/world/npc/npc_villager.png` | 192×192 (2 baris × 3 × 64×96) | 14,5 KB | Baris 0 = pria (jaket cokelat): idle napas 3 frame; baris 1 = wanita (dress hijau): idle napas 3 frame |
+| Ninja penjaga | `assets/world/npc/npc_guard.png` | 256×96 (4 × 64×96) | 11,4 KB | frame 0–1 idle napas (ikat kepala logam Konoha, rompi chunin hijau), 2 melambai, 3 hormat |
+| Anak kecil | `assets/world/npc/npc_kid.png` | 192×96 (3 × 64×96) | 8,2 KB | jongkok → lompat tertinggi → mendarat, loop; kaos oranye, celana biru |
 
 ## Suara
 

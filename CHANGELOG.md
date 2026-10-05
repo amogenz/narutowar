@@ -2,6 +2,58 @@
 
 Riwayat perubahan game per milestone. Format: tanggal — ringkasan.
 
+## 2026-10-06 — v15b: WORLD ART + NPC (integrasi koordinator)
+
+**Latar:** Kritik Bos "peta cuma warna bukan gambar" + NPC placeholder.
+
+**Yang berubah (js/game.js, css/style.css, index.html, deploy.py):**
+1. **Lantai arena gambar beneran**: `konoha_ground.png` (jalan tanah desa +
+   rumput + kerikil + kelopak sakura), `lembah_ground.png` (tanah senja +
+   batu sungai), `akatsuki_ground.png` (tanah malam + retakan merah) —
+   tileable horizontal, di-prerender ke offscreen sekali (tetap 60fps).
+2. **6 dekorasi baru per arena**: gerbang torii + semak sakura (Konoha),
+   batu sungai + ilalang (Lembah), stalagmit + tumpukan batu (Akatsuki) —
+   diposisikan di atas lane, luar area aksi.
+3. **NPC anime beranimasi** di tepi base: warga desa pria/wanita (idle napas),
+   ninja penjaga (idle + melambai + hormat), anak kecil (lompat gembira) —
+   digambar per frame, tanpa alokasi.
+4. **Fix bug**: path `title-art.jpg` di CSS (`assets/...` → `../assets/...`)
+   — background art layar judul kini tampil.
+
+## 2026-10-06 — v15: MENU PAUSE + AUDIT IKON + SUDUT LAYAR KONSISTEN
+
+**Latar:** Upgrade menu & HUD: pause dalam game, tombol orientasi sejak awal
+di semua layar menu, audit ikon seragam, layar full-viewport.
+
+**Yang berubah (index.html, css/style.css, js/game.js, js/ui.js, js/audio.js,
+test/integration.js, test/loop-timing.js):**
+
+1. **Menu pause dalam game**: tombol pause (ikon SVG) di HUD kanan atas +
+   keyboard Esc/P. Overlay gelap + blur, panel fade/scale mulus berisi:
+   LANJUTKAN, MULAI ULANG (restart match, pip ronde sesi tetap), KE MENU
+   UTAMA, toggle SUARA, toggle FULLSCREEN.
+2. **Game-time benar-benar berhenti saat pause**: `loop()` melewati
+   `update()`/`render()`/`tickHUD()` total — timer tak maju, musuh tak
+   bergerak, cooldown diam; `G.last` disegarkan tiap frame agar resume tanpa
+   lompatan dt. SFX game di-mute via `NWAudio._paused` (klik UI tetap bunyi
+   via `uiClick`). Input tempur keyboard/sentuh mati saat pause (overlay
+   menutup seluruh layar).
+3. **Sudut layar konsisten (.corners)**: kiri-atas = kembali/brand,
+   kanan-atas = suara + orientasi — di SEMUA layar menu (judul, mode,
+   karakter, lawan, arena, akhir). Touch target seragam 48px, ikon satu set
+   SVG, absolute terhadap `.screen` (tak ikut scroll, tak menutupi konten).
+   Class lama `.backbtn`/`.corner`/`.corner-l` dihapus.
+4. **Suara/orientasi/fullscreen class-based**: `[data-sound]`,
+   `[data-orient]`, `[data-fs]` dicat & di-bind sekaligus — satu toggle
+   memperbarui semua tombol di semua layar.
+5. **Test**: `integration.js` + `loop-timing.js` di-extend — pause via
+   `_tick()` dan via `loop()` asli: game-time, posisi, cooldown diam total
+   saat pause; jalan lagi tanpa lompatan setelah resume.
+
+**Catatan:** tidak deploy (urusan koordinator); `?v=` & `version.json`
+tidak disentuh.
+
+
 ## 2026-10-05 — v14: FIX LAYOUT PORTRAIT + TOMBOL ORIENTASI + OPTIMASI SMOOTH
 
 **Latar:** Screenshot HP Bos (layar PILIH MODE portrait) menunjukkan tombol
