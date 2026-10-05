@@ -26,6 +26,9 @@ coin:'<svg '+_svgW+'><circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx=
 back:'<svg '+_svgW+'><path d="m14 6-6 6 6 6"/></svg>',
 pause:'<svg '+_svgW+'><path d="M9 5v14M15 5v14" stroke-width="3.6"/></svg>',
 fs:'<svg '+_svgW+'><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></svg>',
+tower:'<svg '+_svgW+'><path d="M9 21v-8l-2.5-7H9l1 2.5h4L15 6h2.5L15 13v8"/><path d="M6 21h12"/><path d="M10.5 16h3"/></svg>',
+sword:'<svg '+_svgW+'><path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 6 4 4"/><path d="m16 3 3 3"/><path d="M5 16l-2 5 5-2"/></svg>',
+skull:'<svg '+_svgW+'><circle cx="12" cy="10" r="6"/><path d="M9.5 14.5 8 21M14.5 14.5 16 21"/><circle cx="10" cy="9.5" r=".8" fill="currentColor" stroke="none"/><circle cx="14" cy="9.5" r=".8" fill="currentColor" stroke="none"/></svg>',
 };
 
 /* ---------- koin & unlock (localStorage) ---------- */
@@ -41,9 +44,12 @@ const store={
   }
 };
 
+/* layar menu yang memutar BGM menu (mulai setelah gestur pertama user) */
+const MENU_SCREENS=['screen-title','screen-mode','screen-select','screen-enemy','screen-arena'];
 function show(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   if(id)$(id).classList.add('active');
+  if(id&&MENU_SCREENS.indexOf(id)>=0){try{NWAudio.playBGM('menu');}catch(e){}}
 }
 
 /* ---------- toast kecil (pengganti alert) ---------- */
@@ -135,39 +141,116 @@ function charCard(ch,onPick,opts){
 function updateCoinBar(){
   document.querySelectorAll('.coinbar').forEach(el=>{el.innerHTML=ICON.coin+'KOIN: '+store.coins;});
 }
+/* ---------- PILIH KARAKTER ala referensi: grid portrait + splash art besar ----------
+ * Splash: assets/splash/<id>.jpg (tim art); fallback ke portrait bila belum ada. */
+let pIdx=0,eIdx=0;
+function splashURL(ch){return 'assets/splash/'+ch.id+'.jpg?v=1';}
+function setSplash(prefix,ch,hidden){
+  const img=$(prefix+'-splash-img');if(!img)return;
+  if(hidden){
+    img.removeAttribute('src');img.alt='???';
+    img.style.filter='brightness(0)';
+    $(prefix+'-splash-name').textContent='???';
+    $(prefix+'-splash-title').textContent='Lawan misterius';
+    return;
+  }
+  img.style.filter='';
+  img.onerror=function(){img.onerror=null;img.src=ch.img||'';};
+  img.src=splashURL(ch);img.alt=ch.name;
+  $(prefix+'-splash-name').textContent=ch.name;
+  $(prefix+'-splash-title').textContent=ch.title||'';
+}
+function markSel(gridId,ch){
+  document.querySelectorAll('#'+gridId+' .char-card').forEach(x=>
+    x.classList.toggle('sel',x.dataset.id===ch.id));
+}
+function selectPlayer(ch){
+  pChar=ch;pIdx=NWChars.indexOf(ch);
+  markSel('char-grid',ch);
+  setSplash('char',ch);
+  $('btn-to-next').disabled=false;
+}
+function selectEnemy(ch){
+  eChar=ch;eIdx=NWChars.indexOf(ch);
+  markSel('enemy-grid',ch);
+  setSplash('enemy',ch);
+  $('btn-to-arena2').disabled=false;
+}
+/* panah kiri/kanan: ganti karakter (hanya yang sudah terbuka) */
+function cycleSel(isEnemy,dir){
+  let i=isEnemy?eIdx:pIdx;
+  for(let n=0;n<NWChars.length;n++){
+    i=(i+dir+NWChars.length)%NWChars.length;
+    const ch=NWChars[i];
+    if(store.isOpen(ch.id)){
+      if(isEnemy)selectEnemy(ch);else selectPlayer(ch);
+      NWAudio.init();NWAudio.click();
+      return;
+    }
+  }
+}
 function buildCharGrid(){
   const pg=$('char-grid');pg.innerHTML='';
-  NWChars.forEach(ch=>pg.appendChild(charCard(ch,(c,el)=>{
-    pChar=c;
-    pg.querySelectorAll('.char-card').forEach(x=>x.classList.remove('sel'));
-    el.classList.add('sel');
-    $('btn-to-next').disabled=false;
+  NWChars.forEach(ch=>pg.appendChild(charCard(ch,(c)=>{
+    if(!store.isOpen(c.id))return;
+    selectPlayer(c);
   })));
+  if(pChar)markSel('char-grid',pChar);
 }
 function buildEnemyGrid(){
   const eg=$('enemy-grid');eg.innerHTML='';
-  NWChars.forEach(ch=>eg.appendChild(charCard(ch,(c,el)=>{
-    eChar=c;
-    eg.querySelectorAll('.char-card').forEach(x=>x.classList.remove('sel'));
-    el.classList.add('sel');
-    $('btn-to-arena2').disabled=false;
+  NWChars.forEach(ch=>eg.appendChild(charCard(ch,(c)=>{
+    if(!store.isOpen(c.id))return;
+    selectEnemy(c);
   },{mystery:true})));
+  if(eChar)markSel('enemy-grid',eChar);
+}
+/* ---------- PILIH ARENA ala referensi: grid thumbnail 4 kolom + preview besar ----------
+ * 3 arena playable (thumbnail komposit dari art arena) + slot "SEGERA HADIR"
+ * bergembok SVG (anti emoji). Thumbnail terpilih = border merah. */
+const STAGE_DESC={
+  konoha:'Gerbang Konoha — Desa Daun Tersembunyi. Bertarung di bawah rindang pohon sakura, ditemani kelopak bunga yang beterbangan.',
+  lembah:'Lembah Akhir — Patung Madara & Hashirama. Medan legendaris tempat dua pendiri desa menentukan akhir pertarungan mereka.',
+  akatsuki:'Malam Akatsuki — Bulan Merah. Arena mencekam di bawah bulan merah darah, dijaga pepohonan mati dan bara api beterbangan.'
+};
+const STAGE_SLOTS=8; /* 3 playable + 5 "segera hadir" = grid 4x2 */
+function stageThumb(id){return 'assets/stages/'+id+'_thumb.jpg?v=1';}
+function stagePrev(id){return 'assets/stages/'+id+'.jpg?v=1';}
+function setStagePreview(id){
+  const A=NWGame.ARENAS[id];if(!A)return;
+  const img=$('arena-preview-img');
+  if(img){img.style.opacity='1';
+    img.onerror=function(){img.onerror=null;img.style.opacity='0.25';};
+    img.src=stagePrev(id);img.alt=A.name;}
+  const nm=$('arena-preview-name');if(nm)nm.textContent=A.name;
+  const ds=$('arena-preview-desc');if(ds)ds.textContent=STAGE_DESC[id]||A.sub||'';
 }
 function buildArenaGrid(){
-  const ag=$('arena-grid');ag.innerHTML='';
-  const prev={konoha:'linear-gradient(180deg,#5f9fdf 55%,#5da24c 55%)',
-    lembah:'linear-gradient(180deg,#ff9a5a 55%,#8f6f3c 55%)',
-    akatsuki:'linear-gradient(180deg,#1a1030 55%,#232a3a 55%)'};
-  Object.keys(NWGame.ARENAS).forEach(id=>{
+  const ag=$('arena-grid');if(!ag)return;ag.innerHTML='';
+  const ids=Object.keys(NWGame.ARENAS);
+  ids.forEach(id=>{
     const A=NWGame.ARENAS[id];
     const d=document.createElement('div');
-    d.className='arena-card'+(arena===id?' sel':'');
-    d.innerHTML=`<div class="arena-prev" style="background:${prev[id]}"></div><h3>${A.name}</h3><p>${A.sub}</p>`;
-    onTap(d,()=>{NWAudio.click();arena=id;
-      ag.querySelectorAll('.arena-card').forEach(x=>x.classList.remove('sel'));
+    d.className='stage-card'+(arena===id?' sel':'');
+    d.dataset.id=id;
+    d.title=A.name+' — '+A.sub;
+    d.innerHTML=`<img class="stage-thumb" src="${stageThumb(id)}" alt="${A.name}" loading="lazy">`+
+      `<span class="stage-name">${A.name}</span>`;
+    onTap(d,()=>{NWAudio.click();arena=id;setStagePreview(id);
+      ag.querySelectorAll('.stage-card').forEach(x=>x.classList.remove('sel'));
       d.classList.add('sel');$('btn-fight').disabled=false;});
     ag.appendChild(d);
   });
+  for(let i=ids.length;i<STAGE_SLOTS;i++){
+    const d=document.createElement('div');
+    d.className='stage-card locked';
+    d.title='Stage baru segera hadir';
+    d.innerHTML=`<span class="stage-lockbox">${ICON.lock}</span>`+
+      `<span class="stage-name dim">SEGERA HADIR</span>`;
+    onTap(d,()=>{NWAudio.click();toast('Stage baru segera hadir!');});
+    ag.appendChild(d);
+  }
+  setStagePreview(arena);
 }
 
 /* ---------- input keyboard ---------- */
@@ -361,7 +444,7 @@ function paintSoundBtns(){
   document.querySelectorAll('[data-sound]').forEach(el=>{el.innerHTML=ic;});
 }
 function toggleSound(){
-  NWAudio.enabled=!NWAudio.enabled;
+  NWAudio.setSfx(!NWAudio.enabled);
   paintSoundBtns();
 }
 /* klik UI yang tetap berbunyi walau SFX game di-mute saat pause */
@@ -398,6 +481,8 @@ function setPaused(v){
   paused=v;
   try{NWGame.setPaused(v);}catch(e){}
   NWAudio._paused=v;
+  /* musik berhenti saat pause, lanjut saat resume */
+  try{if(v)NWAudio.pauseBGM();else NWAudio.resumeBGM();}catch(e){}
   const ov=$('pause-overlay');
   if(ov)ov.classList.toggle('show',v);
 }
@@ -411,7 +496,66 @@ function quitToMenu(){
   setPaused(false);
   NWGame.stop();NWGame.clearView();rwP=0;rwE=0;
   $('hud').classList.add('hidden');
+  const qo=$('quit-overlay');if(qo)qo.classList.remove('show');
   show('screen-title');
+}
+
+/* ---------- SCOREBOARD: portrait + kill/tumbang per petarung + timer + koin ---------- */
+function scoreboardHTML(){
+  const G=NWGame.getState();if(!G||!G.fighters)return'';
+  const heroes=G.fighters.filter(h=>h.kind==='hero');
+  const row=h=>{
+    const me=h===G.player;
+    return '<div class="sb-row'+(me?' me':'')+'">'+
+      '<img src="'+(h.ch.img||'')+'" alt="'+h.ch.name+'">'+
+      '<span class="sb-name">'+h.ch.name+'<small class="'+(h.team===0?'t0':'t1')+'">'+
+      (h.team===0?'TIM KITA':'TIM MUSUH')+(me?' • KAMU':'')+'</small></span>'+
+      '<span class="sb-k"><b>'+(h.kills||0)+'</b></span>'+
+      '<span class="sb-d"><b>'+(h._pd||0)+'</b></span></div>';
+  };
+  const t0=heroes.filter(h=>h.team===0),t1=heroes.filter(h=>h.team===1);
+  return '<div class="sb-head"><span></span><span>PETARUNG</span>'+
+    '<span style="text-align:center">KILL</span><span style="text-align:center">TUMBANG</span></div>'+
+    t0.map(row).join('')+t1.map(row).join('')+
+    '<div class="sb-foot"><span>'+fmtT(G.time)+'</span><span>'+G.kills[0]+' : '+G.kills[1]+
+    '</span><span>KOIN '+G.coins+'</span></div>';
+}
+
+/* ---------- DIALOG KELUAR: "Keluar dan kembali ke menu utama? Ya/Tidak" ---------- */
+function openQuit(){
+  /* buka di atas game yang di-pause; scoreboard live dari objek game */
+  setPaused(true);
+  const sb=$('quit-scoreboard');if(sb)sb.innerHTML=scoreboardHTML();
+  $('quit-overlay').classList.add('show');
+}
+function closeQuit(){
+  $('quit-overlay').classList.remove('show');
+  setPaused(false);
+}
+
+/* ---------- pause: MUSIK & SUARA (tersambung ke NWAudio) ----------
+ * MUSIK = NWAudio.bgm → BGM asli (menu/battle loop); tersimpan 'nw_bgm'.
+ * SUARA = NWAudio.enabled → seluruh SFX; tersimpan 'nw_sfx'. */
+function paintPauseToggles(){
+  const bg=$('btn-bgm'),sf=$('btn-sfx');
+  const setB=(el,on)=>{if(!el)return;el.classList.toggle('off',!on);
+    const b=el.querySelector('b');if(b)b.textContent=on?'ON':'OFF';};
+  setB(bg,NWAudio.bgm!==false);
+  setB(sf,!!NWAudio.enabled);
+}
+function setupPauseToggles(){
+  try{NWAudio.restorePrefs();}catch(e){}
+  paintPauseToggles();
+  onTap($('btn-bgm'),()=>{
+    NWAudio.setBgm(!(NWAudio.bgm!==false));
+    uiClick();paintPauseToggles();
+    toast('Musik: '+(NWAudio.bgm!==false?'ON':'OFF'));
+  });
+  onTap($('btn-sfx'),()=>{
+    NWAudio.setSfx(!NWAudio.enabled);
+    uiClick();paintPauseToggles();
+    toast('Suara: '+(NWAudio.enabled?'ON':'OFF'));
+  });
 }
 
 /* ---------- HUD ---------- */
@@ -419,12 +563,16 @@ function fmtT(s){const m=Math.floor(s/60),ss=Math.floor(s%60);return m+':'+Strin
 /* cache elemen HUD: tickHUD jalan tiap frame render — getElementById/querySelector
  * per frame adalah biaya DOM yang tak perlu. Dibangun malas (lazy) sekali. */
 let _hudCache=null;
+/* cache tanda tangan untuk blok HUD yang mahal (dibangun ulang hanya saat berubah) */
+let _teamsSig='',_towersSig='';
 function hud(){
   if(_hudCache)return _hudCache;
   const o={};
   ['hud','hud-php','hud-pghost','hud-pchakra','hud-timer','hud-kills','hud-coins',
    'hud-ehp','hud-eghost','hud-pname','hud-ptitle','hud-pport',
-   'hud-ename','hud-etitle','hud-eport','hud-pips'].forEach(id=>{o[id]=$(id);});
+   'hud-ename','hud-etitle','hud-eport','hud-pips',
+   'hud-hpnum','hud-coinnum','hud-sdots','hud-teams','hud-score-p','hud-score-e',
+   'hud-towers','hud-killnum','hud-deathnum'].forEach(id=>{o[id]=$(id);});
   o.sk=[];
   for(let i=0;i<4;i++){
     const b=$('sk'+i);
@@ -441,22 +589,66 @@ function renderPips(){
   for(let i=0;i<3;i++)h+='<span class="pip'+(i<rwE?' we':'')+'" title="Ronde musuh"></span>';
   el.innerHTML=h;
 }
+/* blok portrait tim tengah: dibangun ulang hanya bila komposisi berubah */
+function renderTeams(G,H){
+  const heroes=(G.fighters||[]).filter(h=>h.kind==='hero');
+  const sig=heroes.map(h=>h.ch.id+':'+h.team+(h.alive?'1':'0')).join('|');
+  if(sig===_teamsSig)return;_teamsSig=sig;
+  const el=H['hud-teams'];if(!el)return;
+  const t0=heroes.filter(h=>h.team===0),t1=heroes.filter(h=>h.team===1);
+  const im=h=>'<img class="t'+h.team+'" src="'+(h.ch.img||'')+'" alt="" title="'+h.ch.name+'" style="'+(h.alive?'':'opacity:.3;filter:grayscale(1)')+'">';
+  el.innerHTML=t0.map(im).join('')+'<span class="tdiv"></span>'+t1.map(im).join('');
+}
+/* blok status tower kanan atas: ikon SVG per tower/base, redup bila hancur */
+function renderTowers(G,H){
+  const ts=(G.towers||[]).concat(G.bases||[]);
+  const sig=ts.map(t=>t.kind+t.team+(t.alive?'1':'0')).join('|');
+  if(sig===_towersSig)return;_towersSig=sig;
+  const el=H['hud-towers'];if(!el)return;
+  /* urut: tim 0 dulu lalu tim 1 (kiri=tim kita) */
+  ts.sort((a,b)=>a.team-b.team);
+  el.innerHTML=ts.map(t=>'<span class="tw t'+t.team+(t.alive?'':' dead')+'" title="'+
+    (t.kind==='base'?'Base':'Tower')+' '+(t.team===0?'kita':'musuh')+'">'+ICON.tower+'</span>').join('');
+}
+function renderSkillDots(p,H){
+  const el=H['hud-sdots'];if(!el)return;
+  if(!el.children.length)el.innerHTML='<span class="sdot"></span>'.repeat(4);
+  for(let i=0;i<4;i++){
+    const sk=i<3?p.ch.skills[i]:p.ch.ult;
+    const ready=p.cds[i]<=0&&p.chakra>=sk.cost;
+    el.children[i].classList.toggle('on',ready);
+    el.children[i].title=sk.name+(ready?' — siap':'');
+  }
+}
 function tickHUD(){
   const H=hud();
   if(!H.hud||H.hud.classList.contains('hidden'))return;
   const G=NWGame.getState(),p=G.player;
   if(!p)return;
+  /* lacak tumbang per hero (game.js tak menyimpan deaths) — untuk scoreboard */
+  const hs=G.fighters||[];
+  for(const h of hs){
+    if(h.kind!=='hero')continue;
+    if(h._pa===undefined){h._pa=true;h._pd=0;}
+    if(h._pa&&!h.alive)h._pd++;
+    h._pa=h.alive;
+  }
   const pr=p.hp/p.maxhp;
   H['hud-php'].style.width=(100*pr)+'%';
   H['hud-php'].classList.toggle('low',pr<0.3);
+  if(H['hud-hpnum'])H['hud-hpnum'].textContent=Math.ceil(p.hp);
   /* HP dua lapis: lapis putih menyusut perlahan mengikuti damage (ala fighting) */
   if(pr<ghostP-0.001){if(holdP>0)holdP--;else ghostP=Math.max(pr,ghostP-0.012);}
   else{ghostP=pr;holdP=22;}
   H['hud-pghost'].style.width=(100*ghostP)+'%';
   H['hud-pchakra'].style.width=(100*p.chakra/p.maxchakra)+'%';
   H['hud-timer'].textContent=fmtT(G.time);
-  H['hud-kills'].textContent='KILL '+G.kills[0];
-  H['hud-coins'].innerHTML=ICON.coin+'KOIN '+G.coins;
+  if(H['hud-killnum'])H['hud-killnum'].textContent=G.kills[0];
+  if(H['hud-deathnum'])H['hud-deathnum'].textContent=p._pd||0;
+  if(H['hud-coinnum'])H['hud-coinnum'].textContent=G.coins;
+  if(H['hud-score-p'])H['hud-score-p'].textContent=G.kills[0];
+  if(H['hud-score-e'])H['hud-score-e'].textContent=G.kills[1];
+  renderTeams(G,H);renderTowers(G,H);renderSkillDots(p,H);
   const foe=G.fighters.find(h=>h.team===1&&h.kind==='hero');
   if(foe){
     const er=foe.hp/foe.maxhp;
@@ -530,7 +722,7 @@ function bindUI(){
   setupTouch();updateCoinBar();updateLayoutMode();setupOrientToggle();
   // suara hover di semua tombol
   document.addEventListener('mouseover',e=>{
-    if(e.target.closest&&e.target.closest('.btn,.skbtn,.char-card,.mode-card,.arena-card,.iconbtn'))
+    if(e.target.closest&&e.target.closest('.btn,.skbtn,.char-card,.mode-card,.stage-card,.iconbtn'))
       NWAudio.hover();
   });
   /* v15: tombol suara & fullscreen class-based (semua layar + HUD + pause) */
@@ -562,7 +754,8 @@ function bindUI(){
     updateCoinBar();show('screen-select');});
   onTap($('btn-back-select'),()=>{NWAudio.click();show('screen-mode');});
   onTap($('btn-to-next'),()=>{NWAudio.click();
-    if(mode==='versus'){revealedEnemy.clear();buildEnemyGrid();show('screen-enemy');}
+    if(mode==='versus'){revealedEnemy.clear();eChar=null;buildEnemyGrid();
+      setSplash('enemy',null,true);show('screen-enemy');}
     else show('screen-arena');});
   onTap($('btn-back-enemy'),()=>{NWAudio.click();show('screen-select');});
   onTap($('btn-to-arena2'),()=>{NWAudio.click();show('screen-arena');});
@@ -570,7 +763,16 @@ function bindUI(){
   onTap($('btn-fight'),()=>{NWAudio.click();startBattle();});
   onTap($('btn-rematch'),()=>{uiClick();battleStarting=false;startBattle();});
   onTap($('btn-tomenu'),()=>{uiClick();quitToMenu();});
-  onTap($('btn-quit'),()=>{uiClick();quitToMenu();});
+  /* keluar via dialog konfirmasi + scoreboard (ala referensi) */
+  onTap($('btn-quit'),()=>{uiClick();openQuit();});
+  onTap($('btn-quit-yes'),()=>{uiClick();quitToMenu();});
+  onTap($('btn-quit-no'),()=>{uiClick();closeQuit();});
+  /* panah splash pilih karakter / lawan */
+  onTap($('btn-char-prev'),()=>cycleSel(false,-1));
+  onTap($('btn-char-next'),()=>cycleSel(false,1));
+  onTap($('btn-enemy-prev'),()=>cycleSel(true,-1));
+  onTap($('btn-enemy-next'),()=>cycleSel(true,1));
+  setupPauseToggles();
   /* pause dalam game (tombol HUD + keyboard Esc/P) */
   onTap($('btn-pause'),()=>{uiClick();setPaused(true);});
   onTap($('btn-resume'),()=>{setPaused(false);uiClick();});
@@ -581,6 +783,8 @@ function bindUI(){
   document.addEventListener('fullscreenchange',()=>{try{NWGame.resize();}catch(e){}});
   NWGame.onEnd((win,stats)=>{
     setPaused(false); // pengaman: overlay pause tak boleh nyangkut di layar akhir
+    /* musik: menang → jingle victory (BGM battle berhenti); kalah → BGM berhenti */
+    try{if(win)NWAudio.playVictory();else NWAudio.stopBGM();}catch(e){}
     if(win)rwP++;else rwE++;
     renderPips();
     store.coins=store.coins+(stats?stats.coins:0);
@@ -590,6 +794,7 @@ function bindUI(){
     $('end-title').style.color=win?'#ffd23e':'#ff5e5e';
     const c=stats?stats.coins:0,k=stats?stats.kills:0;
     $('end-sub').textContent=(win?'Base musuh hancur! ':'')+k+' kill • +'+c+' koin (total: '+store.coins+')';
+    const esb=$('end-scoreboard');if(esb)esb.innerHTML=scoreboardHTML();
     show('screen-end');
   });
 }
@@ -601,6 +806,7 @@ function insertCoinBar(screenId){
 /* inti mulai battle — dipakai startBattle (dari menu) & restartBattle (dari pause) */
 function launchBattle(){
   show(null);
+  try{NWAudio.playBGM('battle');}catch(e){} /* BGM battle */
   $('hud').classList.remove('hidden');
   document.querySelector('.hud-btns').style.display='block';
   setSkillLabels(pChar);
@@ -624,6 +830,7 @@ function startBattle(){
 /* isi HUD premium: portrait + nama + julukan kedua sisi, reset lapis HP & pip */
 function setupBattleHUD(){
   ghostP=1;ghostE=1;holdP=0;holdE=0;
+  _teamsSig='';_towersSig=''; // paksa bangun ulang blok tim & tower
   const G=NWGame.getState();
   $('hud-pname').textContent=pChar.name;
   $('hud-ptitle').textContent=pChar.title||'';

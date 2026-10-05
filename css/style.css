@@ -92,7 +92,8 @@ html,body{height:100%;background:var(--black);overflow:hidden;font-family:var(--
 .hint{margin-top:14px;font-size:clamp(10px,2vw,12px);color:var(--gray)}
 
 /* ---------- judul ---------- */
-#screen-title{background:linear-gradient(rgba(8,10,22,.60),rgba(8,10,22,.93)),
+#screen-title{background:linear-gradient(rgba(8,10,22,.45),rgba(8,10,22,.88)),
+  url('../assets/title-bg.jpg?v=1') center/cover no-repeat,
   url('../assets/title-art.jpg?v=1') center/cover no-repeat}
 .title-box{text-align:center;max-width:640px;padding:20px}
 .title-box .main-logo{margin-bottom:14px}
@@ -157,15 +158,39 @@ html,body{height:100%;background:var(--black);overflow:hidden;font-family:var(--
 [data-diff].sel::after{content:'';display:inline-block;width:.95em;height:.95em;margin-left:.35em;
   vertical-align:-.14em;
   background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffd23e' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12 5 5 9-11'/%3E%3C/svg%3E") center/contain no-repeat}
-.arena-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:12px 0 16px}
-.arena-card{border:2px solid #3a4468;border-radius:14px;overflow:hidden;cursor:pointer;
-  background:linear-gradient(180deg,rgba(42,48,72,.85),rgba(18,23,42,.9));
+/* ---------- PILIH ARENA ala referensi: grid thumbnail 4 kolom + preview besar ----------
+ * Landscape: grid kiri + panel preview kanan (seperti referensi Stage Select).
+ * Portrait (body.portrait): preview di atas, grid di bawah. */
+.stage-select{display:flex;gap:16px;align-items:stretch;margin:12px 0 16px}
+.stage-grid-wrap{flex:1 1 56%;min-width:0}
+.stage-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stage-card{position:relative;border:2px solid #3a4468;border-radius:10px;overflow:hidden;
+  cursor:pointer;background:linear-gradient(180deg,rgba(42,48,72,.85),rgba(18,23,42,.9));
   transition:transform .12s,border-color .12s,box-shadow .12s}
-.arena-card:hover{transform:translateY(-3px)}
-.arena-card.sel{border-color:var(--gold);box-shadow:0 0 16px rgba(255,210,62,.4)}
-.arena-prev{height:92px;border-bottom:2px solid #3a4468}
-.arena-card h3{font-size:clamp(12px,2.4vw,15px);margin:8px 0 2px}
-.arena-card p{font-size:clamp(10px,2vw,11.5px);color:#b9c2e4;padding-bottom:10px}
+.stage-card:hover{transform:translateY(-3px)}
+/* thumbnail terpilih: border MERAH ala referensi */
+.stage-card.sel{border-color:#e63946;box-shadow:0 0 14px rgba(230,57,70,.55)}
+.stage-thumb{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#0d1122}
+.stage-name{display:block;font-size:clamp(10px,1.8vw,12px);font-weight:700;text-align:center;
+  padding:6px 4px;color:#e8ecff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* slot terkunci: gembok SVG + "SEGERA HADIR" */
+.stage-card.locked{cursor:pointer}
+.stage-lockbox{display:flex;align-items:center;justify-content:center;aspect-ratio:16/9;
+  background:repeating-linear-gradient(135deg,#161b31 0 12px,#10142a 12px 24px);color:#8a93b8}
+.stage-lockbox svg{width:26px;height:26px}
+.stage-name.dim{color:#8a93b8;font-weight:600}
+/* panel preview besar */
+.stage-preview{flex:1 1 44%;min-width:0;border:2px solid #3a4468;border-radius:14px;
+  overflow:hidden;background:#10142a;display:flex;flex-direction:column;align-self:flex-start}
+.stage-preview-img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;
+  border-bottom:2px solid #3a4468;background:#0d1122}
+.stage-preview h3{margin:10px 14px 4px;font-size:clamp(14px,2.6vw,18px);color:var(--gold)}
+.stage-preview p{margin:0 14px 14px;font-size:clamp(11px,2.2vw,13px);color:#b9c2e4;line-height:1.55}
+/* portrait: preview di atas, grid di bawah */
+body.portrait .stage-select{flex-direction:column;gap:12px}
+body.portrait .stage-preview{order:-1;flex:none;width:100%}
+body.portrait .stage-grid{gap:8px}
+body.portrait .stage-name{font-size:10px;padding:5px 2px}
 
 /* ---------- HUD ---------- */
 #hud{position:absolute;inset:0;pointer-events:none;z-index:10}
@@ -230,7 +255,7 @@ body.touchmode #keyhelp{display:none}
 /* ---------- layar kecil ---------- */
 @media (max-width:420px){  .char-grid{grid-template-columns:repeat(2,1fr)}
   .mode-grid{grid-template-columns:repeat(2,1fr)}
-  .arena-grid{grid-template-columns:1fr 1fr}
+  .stage-grid{gap:8px}
   .btn.big{font-size:16px;padding:14px 32px}
   .hpname{font-size:10px}
   .menu-head img{height:42px}
@@ -348,11 +373,13 @@ body.compactland .mode-card{padding:10px 6px}
 body.compactland .mode-card h3{font-size:12px;margin-bottom:4px}
 body.compactland .mode-card p{font-size:10px;line-height:1.4}
 
-/* grid arena: 3 kolom */
-body.compactland .arena-grid{grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 10px}
-body.compactland .arena-prev{height:52px}
-body.compactland .arena-card h3{font-size:12px;margin:6px 0 2px}
-body.compactland .arena-card p{font-size:10px;padding-bottom:8px}
+/* grid arena: 4 kolom tetap (thumbnail kecil) */
+body.compactland .stage-grid{gap:8px}
+body.compactland .stage-name{font-size:10px;padding:4px 2px}
+body.compactland .stage-lockbox svg{width:20px;height:20px}
+body.compactland .stage-preview h3{font-size:14px;margin:8px 10px 2px}
+body.compactland .stage-preview p{font-size:11px;margin:0 10px 10px}
+body.compactland .stage-select{gap:10px;margin:8px 0 10px}
 
 /* tombol & baris aksi: min 44px, spacing konsisten */
 body.compactland .btn{font-size:13px;padding:12px 22px;min-height:44px}
@@ -423,3 +450,166 @@ body.compactland #screen-end .title-box{padding:8px}
 body.compactland .pause-panel{padding:14px 16px}
 body.compactland .pause-panel h2{margin-bottom:10px}
 body.compactland .pause-panel .btn{margin-bottom:8px}
+
+/* ================= v16: UI LEAD OVERHAUL (ala Naruto Senki) ================= */
+
+/* ---- kartu mode ber-art ---- */
+.mode-card{position:relative;overflow:hidden;min-height:128px;display:flex;flex-direction:column;justify-content:flex-end;
+  background:linear-gradient(180deg,rgba(42,48,72,.55),rgba(18,23,42,.9))}
+.mode-card::before{content:'';position:absolute;inset:0;background-size:cover;background-position:center;opacity:.5;transition:opacity .2s}
+.mode-card:hover::before{opacity:.68}
+.mode-card[data-mode="training"]::before{background-image:url('../assets/modes/latihan.jpg?v=1')}
+.mode-card[data-mode="versus"]::before{background-image:url('../assets/modes/versus.jpg?v=1')}
+.mode-card[data-mode="war"]::before{background-image:url('../assets/modes/war.jpg?v=1')}
+.mode-card[data-mode="survival"]::before{background-image:url('../assets/modes/survival.jpg?v=1')}
+.mode-card>*{position:relative;z-index:1}
+.mode-tag{position:absolute;top:8px;right:10px;z-index:1;font-family:var(--font-d);
+  font-size:clamp(15px,2.8vw,22px);color:#fff;letter-spacing:1px;transform:skewX(-8deg);
+  text-shadow:0 2px 0 rgba(0,0,0,.75),0 0 14px rgba(255,122,26,.7)}
+.mode-card h3,.mode-card p{text-shadow:0 2px 5px #000}
+
+/* ---- pilih karakter: grid portrait + splash art besar ---- */
+.select-stage{display:flex;gap:14px;align-items:stretch;margin:10px 0 12px;text-align:left}
+.select-stage .char-grid{flex:1 1 52%;min-width:0;grid-template-columns:repeat(3,1fr);gap:8px;margin:0;
+  align-content:start;max-height:54vh;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;padding-right:2px}
+.select-stage .char-card{padding:8px 4px;text-align:center}
+.select-stage .char-card .card-detail{display:none}
+.select-stage .char-img,.select-stage .char-dot{width:46px;height:46px;margin:0 auto 5px}
+.select-stage .char-card h3{font-size:clamp(10px,1.8vw,12px);margin:0;line-height:1.25}
+.select-stage .locktag{font-size:8.5px;padding:2px 6px;margin-top:3px}
+.select-stage .lockveil{width:30px;height:30px;top:6px}
+.select-stage .lockveil .lockicon svg{width:15px;height:15px}
+.splash-view{flex:1 1 48%;min-width:0;position:relative;border-radius:16px;overflow:hidden;
+  border:2px solid #4a5578;background:#0b0e1a url('../assets/title-art.jpg?v=1') center/cover;min-height:320px;
+  box-shadow:0 8px 28px rgba(0,0,0,.5)}
+.splash-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;background:#0b0e1a}
+.splash-namebar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:6px;
+  padding:10px 8px;background:linear-gradient(transparent,rgba(0,0,0,.88) 55%)}
+.splash-nametxt{flex:1;min-width:0;text-align:center}
+.splash-nametxt h3{font-family:var(--font-d);font-size:clamp(18px,3.4vw,30px);color:#fff;letter-spacing:1px;
+  text-shadow:0 3px 0 rgba(0,0,0,.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.splash-nametxt p{color:var(--gold);font-size:clamp(10px,2vw,13px);font-weight:700;letter-spacing:1.5px;
+  text-shadow:0 2px 3px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iconbtn.arr{width:44px;height:44px;min-width:44px;border-radius:50%;flex:0 0 auto}
+
+/* ---- HUD v16: kiri pemain / tengah tim+skor / kanan tower+kill+timer ---- */
+.hud-top{flex-wrap:nowrap}
+.hside{min-width:0}
+.hud-mid{min-width:0;flex:0 0 auto}
+.teams{display:flex;gap:4px;justify-content:center;margin-bottom:2px;min-height:20px}
+.teams img{width:20px;height:20px;border-radius:50%;object-fit:cover;background:#000;border:2px solid #666}
+.teams img.t0{border-color:#2fa8ff}
+.teams img.t1{border-color:#ff5e5e}
+.teams .tdiv{width:2px;align-self:stretch;background:rgba(255,255,255,.35);border-radius:1px;margin:1px 2px}
+.hscore{font-family:var(--font-d);font-size:clamp(14px,3vw,19px);color:#fff;text-shadow:0 2px 4px #000;line-height:1.1}
+.hscore b:first-child{color:#ffd23e}
+.hscore b:last-child{color:#ff6a6a}
+.hscore span{color:#8a93b8;margin:0 5px}
+.hud-mid .pips{min-height:0;margin-top:2px}
+.hud-right{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.towers{display:flex;gap:4px;justify-content:flex-end}
+.tw{width:19px;height:19px;display:inline-flex}
+.tw svg{width:100%;height:100%}
+.tw.t0{color:#5eb2ff}.tw.t1{color:#ff7a7a}
+.tw.dead{opacity:.22;filter:grayscale(1)}
+.hud-statrow{display:flex;align-items:center;gap:10px}
+.hstat{display:inline-flex;align-items:center;gap:4px;font-weight:800;font-size:clamp(11px,2.4vw,14px);
+  color:#fff;text-shadow:0 1px 3px #000;white-space:nowrap}
+.hstat svg{width:16px;height:16px}
+#hud-kills svg{color:#ffd23e}
+#hud-deaths svg{color:#ff8a8a}
+.htimer{font-family:var(--font-d);font-size:clamp(12px,2.6vw,15px)!important;margin:0!important;color:#fff;text-shadow:0 2px 4px #000}
+/* angka HP di dalam bar + sub-baris (dot jutsu + koin) */
+.hpnumbar{position:relative}
+.hpnum{position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:2;
+  font-size:11px;font-weight:800;color:#fff;text-shadow:0 1px 2px #000}
+.hud-subrow{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:4px}
+.sdots{display:flex;gap:4px;align-items:center}
+.sdot{width:10px;height:10px;border-radius:50%;background:rgba(0,0,0,.55);
+  border:2px solid rgba(255,255,255,.4)}
+.sdot.on{background:var(--gold);border-color:var(--gold);box-shadow:0 0 7px rgba(255,210,62,.85)}
+.hud-coins{display:inline-flex;align-items:center;gap:4px;color:var(--gold);font-weight:800;
+  font-size:clamp(11px,2.4vw,13.5px);text-shadow:0 1px 3px #000;white-space:nowrap}
+.hud-coins svg{width:14px;height:14px}
+/* tombol HUD di bawah panel kanan (hindari tower) */
+#hud .hud-btns{top:calc(98px + var(--sat))}
+body.portrait #hud .hud-btns{top:calc(118px + var(--sat))} /* HUD 2 baris di 360px */
+/* tombol ATTACK: ikon tinju SVG */
+.skbtn.atk svg{width:56%;height:56%;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6))}
+
+/* ---- pause: menu teks putih ala referensi ---- */
+.pause-panel{background:rgba(5,7,15,.96);border:2px solid rgba(255,255,255,.28)}
+.pitem{display:block;width:100%;background:none;border:none;color:#fff;font-family:var(--font-b);
+  font-weight:700;font-size:clamp(16px,3.6vw,20px);letter-spacing:1px;padding:12px 8px;cursor:pointer;
+  text-shadow:0 2px 4px #000;border-radius:10px;min-height:48px;touch-action:manipulation}
+.pitem:hover{background:rgba(255,255,255,.08)}
+.pitem:active{background:rgba(255,255,255,.16)}
+.pitemrow{display:flex;align-items:center;justify-content:center;gap:14px;padding:6px 8px;
+  font-size:clamp(15px,3.2vw,18px);font-weight:700;letter-spacing:1px;text-shadow:0 2px 4px #000}
+.pitemrow>span{color:#fff}
+.ptoggle{background:none;border:none;cursor:pointer;font-size:inherit;font-family:inherit;
+  font-weight:800;letter-spacing:1px;min-width:70px;min-height:44px;border-radius:10px;touch-action:manipulation}
+.ptoggle b{color:#22c55e;text-shadow:0 0 10px rgba(34,197,94,.65)}
+.ptoggle.off b{color:#ff5e5e;text-shadow:0 0 10px rgba(255,59,59,.65)}
+.pitemrow .iconbtn{width:44px;height:44px}
+
+/* ---- dialog keluar ---- */
+#quit-overlay{position:absolute;inset:0;z-index:55;display:flex;align-items:center;justify-content:center;
+  background:rgba(4,6,14,.8);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  opacity:0;visibility:hidden;transition:opacity .22s ease,visibility .22s;
+  padding:calc(14px + var(--sat)) calc(14px + var(--sar)) calc(14px + var(--sab)) calc(14px + var(--sal))}
+#quit-overlay.show{opacity:1;visibility:visible}
+.quit-panel{width:min(470px,94vw);max-height:calc(100dvh - var(--sat) - var(--sab) - 28px);overflow-y:auto;
+  background:linear-gradient(180deg,#2b0f0f,#120608);border:2px solid rgba(255,255,255,.3);
+  border-radius:18px;padding:20px 18px;text-align:center;touch-action:pan-y;
+  box-shadow:0 18px 50px rgba(0,0,0,.7);transform:scale(.94);transition:transform .22s ease}
+#quit-overlay.show .quit-panel{transform:none}
+.quit-panel h2{font-family:var(--font-d);color:#fff;letter-spacing:3px;font-size:clamp(18px,4.4vw,26px);
+  text-shadow:0 3px 0 rgba(0,0,0,.5)}
+.quit-q{color:#dfe6ff;margin:6px 0 4px;font-weight:600;font-size:clamp(13px,2.8vw,16px)}
+
+/* ---- scoreboard ---- */
+.scoreboard{background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.16);border-radius:12px;
+  padding:8px;margin:12px 0;text-align:left}
+.sb-head,.sb-row{display:grid;grid-template-columns:34px 1fr 46px 46px;gap:8px;align-items:center;padding:5px 6px}
+.sb-head{font-size:10px;letter-spacing:2px;color:#8a93b8;font-weight:800;border-bottom:1px solid rgba(255,255,255,.14)}
+.sb-row img{width:32px;height:32px;border-radius:9px;object-fit:cover;background:#000;border:2px solid #4a5578}
+.sb-row.me img{border-color:var(--gold);box-shadow:0 0 8px rgba(255,210,62,.5)}
+.sb-name{font-weight:700;font-size:clamp(11px,2.4vw,13.5px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-name small{display:block;font-size:9.5px;font-weight:800;letter-spacing:1px}
+.sb-name small.t0{color:#7db8ff}.sb-name small.t1{color:#ff8a8a}
+.sb-k{text-align:center;font-weight:800;font-size:clamp(12px,2.6vw,15px)}
+.sb-k b{color:#ffd23e}.sb-d{text-align:center;font-weight:800;font-size:clamp(12px,2.6vw,15px)}
+.sb-d b{color:#ff8a8a}
+.sb-foot{display:flex;justify-content:space-between;gap:8px;padding:9px 6px 3px;color:var(--gold);
+  font-weight:800;font-size:clamp(11px,2.4vw,13.5px);text-shadow:0 1px 3px #000}
+
+/* ---- layar akhir: scoreboard rapi ---- */
+#screen-end .scoreboard{max-width:430px;margin-left:auto;margin-right:auto}
+
+/* ---- responsif v16 ---- */
+@media (max-width:680px){
+  .select-stage{flex-direction:column}
+  .splash-view{min-height:200px;order:-1;flex:none}
+  .select-stage .char-grid{grid-template-columns:repeat(4,1fr);max-height:none}
+}
+@media (max-width:420px){
+  /* HUD 2 baris: baris 1 = pemain | tim+skor | tower+kill+timer,
+     baris 2 = panel musuh full-width (anti tumpuk di 360px) */
+  .hud-top{flex-wrap:wrap;row-gap:5px}
+  .hside.foe{flex:1 1 100%;order:4}
+  .hside.foe .hport{width:28px;height:28px;border-radius:8px}
+  .hside.foe .hpname{font-size:10px}
+  .hside.foe .bar{height:10px}
+  .teams img{width:16px;height:16px}
+  .tw{width:15px;height:15px}
+  .hud-statrow{gap:7px}
+  .hpnum{font-size:9px}
+  .sdot{width:8px;height:8px}
+  .hud-subrow{margin-top:3px}
+  .mode-card{min-height:104px}
+  .sb-head,.sb-row{grid-template-columns:30px 1fr 40px 40px;gap:6px}
+}
+body.compactland .select-stage{flex-direction:row}
+body.compactland .splash-view{min-height:240px;order:0;flex:1 1 44%}
+body.compactland .select-stage .char-grid{grid-template-columns:repeat(3,1fr);max-height:56vh}
