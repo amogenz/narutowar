@@ -2,14 +2,17 @@
 (function(){
   const S = {
     ctx:null, enabled:true,
+    /* _paused: di-set ui.js saat menu pause terbuka — SFX game dibisukan
+       sementara (klik UI tetap bisa bunyi via uiClick yang membuka kunci sesaat) */
+    _paused:false,
     init(){
       if(!this.ctx){
         try{ this.ctx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
       }
-      if(this.ctx && this.ctx.state==='suspended') this.ctx.resume();
+      if(this.ctx && this.ctx.state==='suspended' && !this._paused) this.ctx.resume();
     },
     tone(freq,dur,type,vol,slide){
-      if(!this.enabled) return;
+      if(!this.enabled||this._paused) return;
       this.init();
       if(!this.ctx) return;
       const t=this.ctx.currentTime, o=this.ctx.createOscillator(), g=this.ctx.createGain();
@@ -21,7 +24,7 @@
       o.start(t); o.stop(t+dur+0.02);
     },
     noise(dur,vol){
-      if(!this.enabled) return;
+      if(!this.enabled||this._paused) return;
       this.init(); if(!this.ctx) return;
       const t=this.ctx.currentTime, len=this.ctx.sampleRate*dur, buf=this.ctx.createBuffer(1,len,this.ctx.sampleRate);
       const d=buf.getChannelData(0);
