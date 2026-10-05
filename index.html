@@ -6,13 +6,36 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Naruto War by Amogenz Lab</title>
+<title>Naruto War by Amogenz Lab — Game Fighting Ninja 2D di Web</title>
+<meta name="description" content="Naruto War by Amogenz Lab: game fighting ninja 2D gratis di web, terinspirasi Naruto Senki. Pilih ninja, kuasai 3 jutsu + ultimate, hancurkan tower & base musuh. Main langsung di HP tanpa install.">
+<meta name="keywords" content="naruto war, game naruto 2d, naruto senki web, game fighting ninja, amogenz lab, game android naruto, game web indonesia">
+<meta name="author" content="AMOGENZ LAB">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://naruto.amogenz.xyz/">
+<meta name="theme-color" content="#0b0e1a">
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Naruto War by Amogenz Lab">
+<meta property="og:title" content="Naruto War by Amogenz Lab — Game Fighting Ninja 2D di Web">
+<meta property="og:description" content="Game fighting ninja 2D gratis di web, terinspirasi Naruto Senki. Pilih ninja, kuasai jutsu, hancurkan tower & base musuh. Main langsung di HP tanpa install.">
+<meta property="og:url" content="https://naruto.amogenz.xyz/">
+<meta property="og:image" content="https://naruto.amogenz.xyz/assets/logo-naruto-war-web.jpg">
+<meta property="og:locale" content="id_ID">
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Naruto War by Amogenz Lab — Game Fighting Ninja 2D di Web">
+<meta name="twitter:description" content="Game fighting ninja 2D gratis di web, terinspirasi Naruto Senki. Main langsung di HP tanpa install.">
+<meta name="twitter:image" content="https://naruto.amogenz.xyz/assets/logo-naruto-war-web.jpg">
+<!-- Structured data -->
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"VideoGame","name":"Naruto War by Amogenz Lab","url":"https://naruto.amogenz.xyz/","description":"Game fighting ninja 2D gratis di web, terinspirasi Naruto Senki. Pilih ninja, kuasai 3 jutsu + ultimate, hancurkan tower & base musuh.","inLanguage":"id","genre":["Fighting","Action"],"gamePlatform":["Web","Android"],"applicationCategory":"Game","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"IDR"},"author":{"@type":"Organization","name":"AMOGENZ LAB","url":"https://amogenz.xyz/"}}
+</script>
 <link rel="icon" type="image/png" href="assets/icon-32.png?v=1">
 <link rel="apple-touch-icon" href="assets/icon-180.png?v=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=12">
+<link rel="stylesheet" href="css/style.css?v=14">
 </head>
 <body>
 <div id="wrap">
@@ -43,6 +66,7 @@
   <div id="screen-title" class="screen">
     <div class="lab-badge"><img src="assets/icon-lab-v2.jpg?v=3" alt="LAB"><span>AMOGENZ LAB</span></div>
     <button id="btn-mute-title" class="iconbtn corner" title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
+    <button id="btn-orient-title" class="iconbtn corner-l" title="Kunci orientasi" aria-label="Kunci orientasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
     <div class="title-box">
       <img src="assets/logo-naruto-war-web.jpg?v=2" class="main-logo" alt="NARUTO WAR">
       <p class="subtitle">Pertarungan ninja 2D di web — hancurkan tower &amp; base musuh!</p>
@@ -55,6 +79,7 @@
   <!-- PILIH MODE -->
   <div id="screen-mode" class="screen">
     <div class="panel">
+      <button class="iconbtn backbtn" id="btn-back-mode" aria-label="Kembali"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       <div class="menu-head"><img src="assets/logo-naruto-war-web.jpg?v=2" alt="NARUTO WAR"></div>
       <h2>PILIH MODE</h2>
       <div class="mode-grid">
@@ -69,7 +94,6 @@
         <button type="button" class="btn ghost sm" data-diff="hard" aria-pressed="false">HARD</button>
       </div>
       <div class="row">
-        <button class="btn ghost" id="btn-back-mode">KEMBALI</button>
         <button class="btn" id="btn-to-char" disabled>LANJUT</button>
       </div>
     </div>
@@ -78,13 +102,13 @@
   <!-- PILIH ARENA -->
   <div id="screen-arena" class="screen">
     <div class="panel">
+      <button class="iconbtn backbtn" id="btn-back-arena" aria-label="Kembali"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       <div class="menu-head"><img src="assets/logo-naruto-war-web.jpg?v=2" alt="NARUTO WAR"></div>
       <h2>PILIH ARENA</h2>
       <div class="steps"><div class="steptrack"><div class="stepfill" style="width:100%"></div></div><p class="stepnum">3/3 • PILIH ARENA</p></div>
       <div id="arena-grid" class="arena-grid"></div>
       <div class="row">
-        <button class="btn ghost" id="btn-back-arena">KEMBALI</button>
-        <button class="btn" id="btn-fight" disabled>MULAI BERTARUNG</button>
+        <button class="btn" id="btn-fight">MULAI BERTARUNG</button>
       </div>
     </div>
   </div>
@@ -92,12 +116,12 @@
   <!-- PILIH KARAKTER -->
   <div id="screen-select" class="screen">
     <div class="panel">
+      <button class="iconbtn backbtn" id="btn-back-select" aria-label="Kembali"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       <div class="menu-head"><img src="assets/logo-naruto-war-web.jpg?v=2" alt="NARUTO WAR"></div>
       <h2>PILIH NINJAMU</h2>
       <div class="steps"><div class="steptrack"><div class="stepfill" style="width:33%"></div></div><p class="stepnum">1/3 • PILIH KARAKTERMU</p></div>
       <div id="char-grid" class="char-grid"></div>
       <div class="row">
-        <button class="btn ghost" id="btn-back-select">KEMBALI</button>
         <button class="btn" id="btn-to-next" disabled>LANJUT</button>
       </div>
     </div>
@@ -106,12 +130,12 @@
   <!-- PILIH LAWAN -->
   <div id="screen-enemy" class="screen">
     <div class="panel">
+      <button class="iconbtn backbtn" id="btn-back-enemy" aria-label="Kembali"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       <div class="menu-head"><img src="assets/logo-naruto-war-web.jpg?v=2" alt="NARUTO WAR"></div>
       <h2>PILIH LAWANMU</h2>
       <div class="steps"><div class="steptrack"><div class="stepfill" style="width:66%"></div></div><p class="stepnum">2/3 • LAWAN MISTERIUS — KETUK UNTUK MENGUNGKAP</p></div>
       <div id="enemy-grid" class="char-grid"></div>
       <div class="row">
-        <button class="btn ghost" id="btn-back-enemy">KEMBALI</button>
         <button class="btn" id="btn-to-arena2" disabled>LANJUT: PILIH ARENA</button>
       </div>
     </div>
@@ -125,7 +149,7 @@
         <div class="hinfo">
           <div class="hpname" id="hud-pname"></div>
           <div class="hptitle" id="hud-ptitle"></div>
-          <div class="bar"><div id="hud-pghost" class="ghost"></div><div id="hud-php" class="fill hp"></div></div>
+          <div class="bar"><div id="hud-pghost" class="barghost"></div><div id="hud-php" class="fill hp"></div></div>
           <div class="bar small"><div id="hud-pchakra" class="fill chakra"></div></div>
         </div>
       </div>
@@ -138,13 +162,13 @@
         <div class="hinfo right">
           <div class="hpname" id="hud-ename"></div>
           <div class="hptitle" id="hud-etitle"></div>
-          <div class="bar"><div id="hud-eghost" class="ghost"></div><div id="hud-ehp" class="fill hp"></div></div>
+          <div class="bar"><div id="hud-eghost" class="barghost"></div><div id="hud-ehp" class="fill hp"></div></div>
         </div>
         <img id="hud-eport" class="hport" alt="">
       </div>
     </div>
     <div class="hud-btns">
-      <button id="btn-orient" class="iconbtn" title="Kunci landscape" aria-label="Kunci landscape"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
+      <button id="btn-orient" class="iconbtn" title="Kunci orientasi" aria-label="Kunci orientasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
       <button id="btn-fs" class="iconbtn" title="Layar penuh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></svg></button>
       <button id="btn-sound" class="iconbtn" title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
       <button id="btn-quit" class="iconbtn" title="Keluar" aria-label="Keluar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
@@ -167,17 +191,6 @@
     <div id="keyhelp">Gerak: WASD / Panah &nbsp;•&nbsp; Attack: Spasi &nbsp;•&nbsp; Jutsu: Z X C &nbsp;•&nbsp; Ult: U &nbsp;•&nbsp; Dash: ketuk 2&times; arah / Shift</div>
   </div>
 
-  <!-- OVERLAY PAKSA LANDSCAPE -->
-  <div id="rotate-overlay" class="hidden">
-    <div class="rotate-box">
-      <div class="rotate-icon"></div>
-      <h2>PUTAR HP KAMU</h2>
-      <p>Game ini wajib dimainkan dalam mode <b>landscape</b> (miring).</p>
-      <button class="btn big" id="btn-force-landscape">PAKSA LANDSCAPE</button>
-      <p class="hint">Jika tombol tidak berfungsi, aktifkan rotasi otomatis di HP lalu miringkan HP.</p>
-    </div>
-  </div>
-
   <!-- LAYAR AKHIR -->
   <div id="screen-end" class="screen">
     <div class="title-box">
@@ -194,8 +207,8 @@
 <script src="js/data.js?v=7"></script>
 <script src="js/sprite.js?v=2"></script>
 <script src="js/fighter.js?v=2"></script>
-<script src="js/game.js?v=9"></script>
-<script src="js/ui.js?v=12"></script>
+<script src="js/game.js?v=11"></script>
+<script src="js/ui.js?v=15"></script>
 <script src="js/main.js?v=3"></script>
 </body>
 </html>

@@ -30,8 +30,6 @@ html,body{height:100%;background:var(--black);overflow:hidden;font-family:var(--
   max-height:calc(100dvh - var(--sat) - var(--sab) - 24px);
   overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
   scrollbar-width:thin;touch-action:pan-y;padding:2px}
-/* paksa-landscape: tinggi boks yang di-rotate = 100vw (100dvh tetap 740 = viewport portrait) */
-body.forcerotate .panel{max-height:calc(100vw - var(--sat) - var(--sab) - 24px)}
 .panel h2{font-family:var(--font-d);font-size:clamp(18px,4vw,28px);letter-spacing:2px;margin-bottom:4px;
   color:var(--gold);text-shadow:0 3px 0 rgba(0,0,0,.5)}
 .menu-head{margin-bottom:10px}
@@ -148,7 +146,7 @@ body.forcerotate .panel{max-height:calc(100vw - var(--sat) - var(--sab) - 24px)}
 .mode-card h3{font-family:var(--font-d);color:var(--org);font-size:clamp(12px,2.4vw,15px);margin-bottom:6px;letter-spacing:1px}
 .mode-card p{font-size:clamp(10px,2.2vw,12.5px);color:#b9c2e4;line-height:1.5}
 .diff-row{display:flex;gap:10px;align-items:center;justify-content:center;margin-bottom:6px;color:#dfe6ff;
-  font-size:clamp(12px,2.4vw,14px)}
+  font-size:clamp(12px,2.4vw,14px);position:relative;z-index:5}
 /* penanda jelas untuk kesulitan yang sedang aktif: ceklis SVG (anti emoji) */
 [data-diff].sel::after{content:'';display:inline-block;width:.95em;height:.95em;margin-left:.35em;
   vertical-align:-.14em;
@@ -185,7 +183,7 @@ body.forcerotate .panel{max-height:calc(100vw - var(--sat) - var(--sab) - 24px)}
 #hud-stats span{margin:0 6px}
 .hud-btns{position:absolute;top:8px;right:8px;display:none}
 .hud-btns .iconbtn{pointer-events:auto;margin-left:6px}
-#btn-orient.locked{border-color:var(--green);color:#7dff9e;box-shadow:0 0 10px rgba(34,197,94,.5)}
+#btn-fs{order:0}
 #keyhelp{position:absolute;bottom:calc(6px + var(--sab));left:0;right:0;text-align:center;font-size:11px;
   color:rgba(255,255,255,.8);text-shadow:0 1px 2px #000;font-weight:600}
 
@@ -223,20 +221,6 @@ body.touchmode #keyhelp{display:none}
   opacity:0;visibility:hidden;transition:opacity .2s,transform .2s;max-width:86vw;text-align:center}
 #toast.show{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
 
-/* ---------- overlay landscape ---------- */
-#rotate-overlay{position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
-  background:rgba(5,8,18,.96);text-align:center;padding:20px}
-#rotate-overlay.hidden{display:none}
-.rotate-box h2{font-family:var(--font-d);letter-spacing:3px;color:var(--gold);margin:14px 0 8px;font-size:clamp(18px,4.5vw,22px)}
-.rotate-box p{color:#dfe6ff;margin-bottom:16px;font-size:clamp(12px,2.8vw,15px)}
-.rotate-icon{width:62px;height:106px;margin:0 auto;border:4px solid var(--gold);border-radius:10px;
-  position:relative;animation:rot 1.6s ease-in-out infinite}
-.rotate-icon::after{content:'';position:absolute;left:50%;top:8px;width:4px;height:18px;background:var(--gold);
-  transform:translateX(-50%);border-radius:2px}
-@keyframes rot{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(90deg)}}
-body.forcerotate #wrap{width:100vh;height:100vw;position:fixed;left:50%;top:50%;
-  transform:translate(-50%,-50%) rotate(90deg)}
-
 /* ---------- layar kecil ---------- */
 @media (max-width:420px){  .char-grid{grid-template-columns:repeat(2,1fr)}
   .mode-grid{grid-template-columns:repeat(2,1fr)}
@@ -257,9 +241,10 @@ body.forcerotate #wrap{width:100vh;height:100vw;position:fixed;left:50%;top:50%;
 .hinfo.right{text-align:right}
 .hptitle{font-size:10px;color:var(--gold);letter-spacing:1px;margin-bottom:3px;
   text-shadow:0 1px 2px #000;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* HP dua lapis: lapis putih delay di belakang */
+/* HP dua lapis: lapis putih delay di belakang (class .barghost — dulunya .ghost,
+   di-rename agar tak bentrok dengan .btn.ghost) */
 .bar{position:relative}
-.ghost{position:absolute;top:2px;bottom:2px;left:2px;border-radius:6px;pointer-events:none;
+.barghost{position:absolute;top:2px;bottom:2px;left:2px;border-radius:6px;pointer-events:none;
   background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,200,200,.75))}
 .fill{position:relative;z-index:1}
 /* pip ronde (bulan) tengah atas */
@@ -305,14 +290,11 @@ body.forcerotate #wrap{width:100vh;height:100vw;position:fixed;left:50%;top:50%;
 /* tombol HUD melayang di bawah panel kanan (hindari portrait) */
 #hud .hud-btns{top:calc(74px + var(--sat));right:calc(10px + var(--sar))}
 
-/* (blok landscape-pendek v9 dihapus — digantikan "COMPACT LANDSCAPE v10" di bawah,
-   dikunci via class body.compactland agar juga berlaku saat paksa-landscape) */
+/* (blok landscape-pendek v9 dihapus — digantikan "COMPACT LANDSCAPE v10" di bawah) */
 
-/* ================= COMPACT LANDSCAPE v10 — anti-tumpuk menu di HP =================
-   Aktif via class body.compactland (diatur JS di checkOrientation):
-   - HP landscape pendek (tinggi <= 470px, cth. 740x360), ATAU
-   - mode paksa-landscape (body.forcerotate) — viewport CSS tetap 360x740 portrait
-     sehingga media query tak bisa diandalkan; class body selalu bisa.
+/* ================= COMPACT LANDSCAPE — anti-tumpuk menu di HP =================
+   Aktif via class body.compactland (diatur JS di updateLayoutMode):
+   HP landscape pendek (tinggi <= 470px, cth. 740x360).
    Prinsip: tak ada overlap; yang tak muat di-scroll halus di dalam .panel. */
 #end-title{font-family:var(--font-d);font-size:clamp(28px,8vw,54px);letter-spacing:2px;
   text-shadow:0 4px 0 rgba(0,0,0,.5);line-height:1.15}
@@ -323,9 +305,18 @@ body.forcerotate #wrap{width:100vh;height:100vw;position:fixed;left:50%;top:50%;
   overflow-y:auto;touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 #screen-end .row{position:relative;z-index:2}
 #screen-end .row .btn{pointer-events:auto}
-/* paksa-landscape: tinggi boks rotasi = 100vw (100dvh tetap 740 = viewport portrait) */
-body.forcerotate #screen-end .title-box{max-height:calc(100vw - var(--sat) - var(--sab) - 24px)}
 
+/* ============ PORTRAIT (v13): menu ramping, sentuh nyaman ============
+   Aktif via class body.portrait (diatur JS di updateLayoutMode). */
+body.portrait #stick{width:32vw;height:32vw;min-width:96px;min-height:96px;
+  max-width:132px;max-height:132px}
+body.portrait .skbtn{width:14.5vw;height:14.5vw;min-width:48px;min-height:48px;
+  max-width:62px;max-height:62px;font-size:12px}
+body.portrait .skbtn.atk{width:19vw;height:19vw;min-width:60px;min-height:60px;
+  max-width:78px;max-height:78px}
+body.portrait #skillbtns{gap:1.2vh;right:calc(2vw + var(--sar));bottom:calc(3vh + var(--sab))}
+body.portrait .btnrow{gap:1.2vh}
+body.portrait #hud .hud-btns{top:calc(64px + var(--sat))}
 body.compactland .screen{padding:calc(6px + var(--sat)) calc(8px + var(--sar)) calc(6px + var(--sab)) calc(8px + var(--sal))}
 body.compactland .menu-head{margin-bottom:4px}
 body.compactland .menu-head img{height:32px}
@@ -384,3 +375,24 @@ body.compactland .splash-title{margin:4px 0 8px}
 
 /* layar akhir: tetap di tengah, tombol tak menabrak judul */
 body.compactland #screen-end .title-box{padding:8px}
+
+/* ============ FIX v14: tombol kembali ikon + audit portrait 360px ============
+   - .backbtn: tombol kembali kecil (panah kiri SVG) absolute kiri-atas tiap .panel
+   - .panel position:relative agar backbtn jadi acuan posisi
+   - .iconbtn.corner-l: tombol orientasi di layar judul (kiri tombol mute)
+   - .diff-row boleh wrap di layar sangat sempit (anti overflow) */
+.panel{position:relative}
+.backbtn{position:absolute;top:10px;left:10px;z-index:6;width:44px;height:44px}
+.backbtn svg{width:22px;height:22px}
+.iconbtn.corner-l{position:absolute;top:calc(14px + var(--sat));right:calc(74px + var(--sar));z-index:5}
+.diff-row{flex-wrap:wrap}
+@media (max-width:420px){
+  /* mode-grid 2 kolom sudah ada; pastikan kartu mode muat & tak kepotong */
+  .mode-grid{gap:8px}
+  .mode-card{padding:14px 6px}
+  .mode-card p{font-size:11px}
+  /* tombol orientasi judul: rapat di samping tombol mute */
+  .iconbtn.corner-l{top:calc(14px + var(--sat));right:calc(68px + var(--sar))}
+}
+body.compactland .iconbtn.corner-l{top:calc(8px + var(--sat));right:calc(64px + var(--sar))}
+body.compactland .backbtn{top:6px;left:6px;width:40px;height:40px}
