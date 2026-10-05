@@ -35,7 +35,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=15">
+<link rel="stylesheet" href="css/style.css?v=17">
 </head>
 <body>
 <div id="wrap">
@@ -91,10 +91,10 @@
       <div class="menu-head"><img src="assets/logo-naruto-war-web.jpg?v=2" alt="NARUTO WAR"></div>
       <h2>PILIH MODE</h2>
       <div class="mode-grid">
-        <div class="mode-card" data-mode="training"><h3>LATIHAN</h3><p>Lawan boneka kayu.<br>Uji jurusmu.</p></div>
-        <div class="mode-card" data-mode="versus"><h3>VERSUS 1v1</h3><p>1v1 + wave minion.<br>Hancurkan tower &amp; base musuh.</p></div>
-        <div class="mode-card" data-mode="war"><h3>WAR 3v3</h3><p>3v3 + wave minion.<br>Hancurkan tower &amp; base musuh.</p></div>
-        <div class="mode-card" data-mode="survival"><h3>SURVIVAL</h3><p>Bertahan dari 8 gelombang<br>musuh tanpa akhir.</p></div>
+        <div class="mode-card" data-mode="training"><span class="mode-tag">SOLO</span><h3>LATIHAN</h3><p>Lawan boneka kayu.<br>Uji jurusmu.</p></div>
+        <div class="mode-card" data-mode="versus"><span class="mode-tag">1V1</span><h3>VERSUS 1v1</h3><p>1v1 + wave minion.<br>Hancurkan tower &amp; base musuh.</p></div>
+        <div class="mode-card" data-mode="war"><span class="mode-tag">3V3</span><h3>WAR 3v3</h3><p>3v3 + wave minion.<br>Hancurkan tower &amp; base musuh.</p></div>
+        <div class="mode-card" data-mode="survival"><span class="mode-tag">8 WAVE</span><h3>SURVIVAL</h3><p>Bertahan dari 8 gelombang<br>musuh tanpa akhir.</p></div>
       </div>
       <div class="diff-row">
         <span>Kesulitan:</span>
@@ -116,11 +116,20 @@
       <button class="iconbtn" data-sound title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
       <button class="iconbtn" data-orient title="Kunci orientasi" aria-label="Kunci orientasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
     </div>
-    <div class="panel">
+    <div class="panel panel-arena">
       <div class="menu-head"><img src="assets/logo-naruto-war-web.jpg?v=2" alt="NARUTO WAR"></div>
       <h2>PILIH ARENA</h2>
       <div class="steps"><div class="steptrack"><div class="stepfill" style="width:100%"></div></div><p class="stepnum">3/3 • PILIH ARENA</p></div>
-      <div id="arena-grid" class="arena-grid"></div>
+      <div class="stage-select">
+        <div class="stage-grid-wrap">
+          <div id="arena-grid" class="stage-grid"></div>
+        </div>
+        <div class="stage-preview">
+          <img id="arena-preview-img" class="stage-preview-img" alt="Preview arena">
+          <h3 id="arena-preview-name">—</h3>
+          <p id="arena-preview-desc"></p>
+        </div>
+      </div>
       <div class="row">
         <button class="btn" id="btn-fight">MULAI BERTARUNG</button>
       </div>
@@ -140,7 +149,17 @@
       <div class="menu-head"><img src="assets/logo-naruto-war-web.jpg?v=2" alt="NARUTO WAR"></div>
       <h2>PILIH NINJAMU</h2>
       <div class="steps"><div class="steptrack"><div class="stepfill" style="width:33%"></div></div><p class="stepnum">1/3 • PILIH KARAKTERMU</p></div>
-      <div id="char-grid" class="char-grid"></div>
+      <div class="select-stage">
+        <div id="char-grid" class="char-grid"></div>
+        <div class="splash-view">
+          <img id="char-splash-img" class="splash-img" alt="Karakter terpilih">
+          <div class="splash-namebar">
+            <button class="iconbtn arr" id="btn-char-prev" title="Karakter sebelumnya" aria-label="Karakter sebelumnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button>
+            <div class="splash-nametxt"><h3 id="char-splash-name">—</h3><p id="char-splash-title"></p></div>
+            <button class="iconbtn arr" id="btn-char-next" title="Karakter berikutnya" aria-label="Karakter berikutnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg></button>
+          </div>
+        </div>
+      </div>
       <div class="row">
         <button class="btn" id="btn-to-next" disabled>LANJUT</button>
       </div>
@@ -160,7 +179,17 @@
       <div class="menu-head"><img src="assets/logo-naruto-war-web.jpg?v=2" alt="NARUTO WAR"></div>
       <h2>PILIH LAWANMU</h2>
       <div class="steps"><div class="steptrack"><div class="stepfill" style="width:66%"></div></div><p class="stepnum">2/3 • LAWAN MISTERIUS — KETUK UNTUK MENGUNGKAP</p></div>
-      <div id="enemy-grid" class="char-grid"></div>
+      <div class="select-stage">
+        <div id="enemy-grid" class="char-grid"></div>
+        <div class="splash-view">
+          <img id="enemy-splash-img" class="splash-img" alt="Lawan terpilih">
+          <div class="splash-namebar">
+            <button class="iconbtn arr" id="btn-enemy-prev" title="Lawan sebelumnya" aria-label="Lawan sebelumnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button>
+            <div class="splash-nametxt"><h3 id="enemy-splash-name">—</h3><p id="enemy-splash-title"></p></div>
+            <button class="iconbtn arr" id="btn-enemy-next" title="Lawan berikutnya" aria-label="Lawan berikutnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg></button>
+          </div>
+        </div>
+      </div>
       <div class="row">
         <button class="btn" id="btn-to-arena2" disabled>LANJUT: PILIH ARENA</button>
       </div>
@@ -170,20 +199,36 @@
   <!-- HUD PERTARUNGAN -->
   <div id="hud" class="hidden">
     <div class="hud-top">
+      <!-- KIRI: pemain — portrait + HP(angka) + energy + dot jutsu + koin -->
       <div class="hside ally">
         <img id="hud-pport" class="hport" alt="">
         <div class="hinfo">
           <div class="hpname" id="hud-pname"></div>
           <div class="hptitle" id="hud-ptitle"></div>
-          <div class="bar"><div id="hud-pghost" class="barghost"></div><div id="hud-php" class="fill hp"></div></div>
+          <div class="bar hpnumbar"><div id="hud-pghost" class="barghost"></div><div id="hud-php" class="fill hp"></div><span class="hpnum" id="hud-hpnum">0</span></div>
           <div class="bar small"><div id="hud-pchakra" class="fill chakra"></div></div>
+          <div class="hud-subrow">
+            <div id="hud-sdots" class="sdots" title="Status jutsu"></div>
+            <div id="hud-coins" class="hud-coins" title="Koin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="3.6" ry="5.2"/></svg><b id="hud-coinnum">0</b></div>
+          </div>
         </div>
       </div>
+      <!-- TENGAH: portrait tim + skor + pip ronde -->
       <div class="hud-mid">
+        <div id="hud-teams" class="teams"></div>
+        <div id="hud-score" class="hscore"><b id="hud-score-p">0</b><span>:</span><b id="hud-score-e">0</b></div>
         <div id="hud-pips" class="pips"></div>
-        <div id="hud-timer">0:00</div>
-        <div id="hud-stats"><span id="hud-kills">KILL 0</span> <span id="hud-coins">KOIN 0</span></div>
       </div>
+      <!-- KANAN: status tower + kill + timer -->
+      <div class="hud-right">
+        <div id="hud-towers" class="towers" title="Status tower"></div>
+        <div class="hud-statrow">
+          <span class="hstat" id="hud-kills" title="Kill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="m13 6 4 4"/><path d="m16 3 3 3"/><path d="M5 16l-2 5 5-2"/></svg><b id="hud-killnum">0</b></span>
+          <span class="hstat" id="hud-deaths" title="Tumbang"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="6"/><path d="M9.5 14.5 8 21M14.5 14.5 16 21"/><circle cx="10" cy="9.5" r=".8" fill="currentColor"/><circle cx="14" cy="9.5" r=".8" fill="currentColor"/></svg><b id="hud-deathnum">0</b></span>
+          <span class="hstat htimer" id="hud-timer">0:00</span>
+        </div>
+      </div>
+      <!-- MUSUH (ringkas) -->
       <div class="hside foe">
         <div class="hinfo right">
           <div class="hpname" id="hud-ename"></div>
@@ -211,7 +256,7 @@
           <div class="skcell"><button class="skbtn ult" data-sk="3" id="sk3" title="Ultimate"><span class="cd"></span><span class="cdnum"></span><b>ULT</b></button><span class="skname ult" id="skn3"></span></div>
         </div>
         <div class="btnrow">
-          <div class="skcell"><button class="skbtn atk" id="btn-atk" title="Attack"><b>ATK</b></button><span class="skname">Serang</span></div>
+          <div class="skcell"><button class="skbtn atk" id="btn-atk" title="Serang"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.6 3.2c.9 0 1.6.7 1.6 1.6V6h.4V4.9c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6V6h.4V5.2c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6V9c.9.1 1.6.9 1.6 1.8v3.1c0 3.9-2.9 6.9-6.9 6.9-2.9 0-4.9-1.1-6.6-3.2l-2.1-2.6c-.7-.9-.5-2.1.4-2.7.8-.5 1.9-.3 2.5.5l1.7 2V4.8c0-.9.7-1.6 1.6-1.6zm.4 4.3v3.2h.4V6.4h-.4zm3.2 0v3.2h.4V6.4h-.4zm3.2.6v2.6h.4V7h-.4z"/></svg></button><span class="skname">Serang</span></div>
         </div>
       </div>
     </div>
@@ -222,16 +267,24 @@
   <div id="pause-overlay">
     <div class="pause-panel" role="dialog" aria-label="Menu jeda">
       <h2>JEDA</h2>
-      <button class="btn big" id="btn-resume">LANJUTKAN</button>
-      <button class="btn" id="btn-restart">MULAI ULANG</button>
-      <button class="btn ghost" id="btn-pause-menu">KE MENU UTAMA</button>
-      <div class="pause-row">
-        <span>SUARA</span>
-        <button class="iconbtn" data-sound title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
-      </div>
-      <div class="pause-row">
-        <span>LAYAR PENUH</span>
-        <button class="iconbtn" data-fs title="Layar penuh" aria-label="Layar penuh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></svg></button>
+      <button class="pitem" id="btn-resume">Kembali Bertarung</button>
+      <button class="pitem" id="btn-restart">Mulai Ulang</button>
+      <button class="pitem" id="btn-pause-menu">Kembali ke Menu</button>
+      <div class="pitemrow"><span>MUSIK</span><button class="ptoggle" id="btn-bgm" aria-label="Musik on/off"><b>ON</b></button></div>
+      <div class="pitemrow"><span>SUARA</span><button class="ptoggle" id="btn-sfx" aria-label="Suara on/off"><b>ON</b></button></div>
+      <div class="pitemrow"><span>LAYAR PENUH</span><button class="iconbtn" data-fs title="Layar penuh" aria-label="Layar penuh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></svg></button></div>
+    </div>
+  </div>
+
+  <!-- DIALOG KELUAR + SCOREBOARD -->
+  <div id="quit-overlay">
+    <div class="quit-panel" role="dialog" aria-label="Keluar dari pertarungan">
+      <h2>KELUAR?</h2>
+      <p class="quit-q">Keluar dan kembali ke menu utama?</p>
+      <div id="quit-scoreboard" class="scoreboard"></div>
+      <div class="row">
+        <button class="btn" id="btn-quit-yes">YA</button>
+        <button class="btn ghost" id="btn-quit-no">TIDAK</button>
       </div>
     </div>
   </div>
@@ -245,6 +298,7 @@
     <div class="title-box">
       <h1 id="end-title">MENANG!</h1>
       <p id="end-sub" class="subtitle"></p>
+      <div id="end-scoreboard" class="scoreboard"></div>
       <div class="row">
         <button class="btn" id="btn-rematch">MAIN LAGI</button>
         <button class="btn ghost" id="btn-tomenu">MENU UTAMA</button>
@@ -252,12 +306,12 @@
     </div>
   </div>
 </div>
-<script src="js/audio.js?v=3"></script>
+<script src="js/audio.js?v=4"></script>
 <script src="js/data.js?v=7"></script>
 <script src="js/sprite.js?v=2"></script>
 <script src="js/fighter.js?v=2"></script>
-<script src="js/game.js?v=12"></script>
-<script src="js/ui.js?v=16"></script>
+<script src="js/game.js?v=14"></script>
+<script src="js/ui.js?v=18"></script>
 <script src="js/main.js?v=3"></script>
 </body>
 </html>
