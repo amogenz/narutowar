@@ -28,7 +28,10 @@ const G={
   partPool:[],projPool:[],
   waveT:0,survT:0,survWave:0,input:{x:0,y:0},
   kills:[0,0],coins:0,banner:null,bannerT:0,
-  onEnd:null,imgs:{},ambientT:0
+  onEnd:null,imgs:{},ambientT:0,
+  /* art dunia: preload sekali, prerender ke offscreen, fallback prosedural */
+  world:{pre:null,ready:false,arena:{},decor:{},amb:{},struct:{},dummy:null,dummyHit:null,minion:{}},
+  amb:[],clouds:[] // pool partikel ambient (maks 40, tanpa alokasi di loop) + awan langit
 };
 
 /* ---------- scaling: canvas = viewport x dpr (max 2), dunia logis 960x540 ----------
@@ -60,12 +63,11 @@ function jfree(p){if(G.projPool.length<90)G.projPool.push(p);}
 
 /* ---------- background berlapis (parallax) ---------- */
 function mkCanvas(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
-function buildLayers(){
-  const A=ARENAS[G.arena];
-  const sky=mkCanvas(W,H),far=mkCanvas(WORLD_W,H),mid=mkCanvas(WORLD_W,H),gnd=mkCanvas(WORLD_W,H);
-  let g;
+/* Fallback prosedural (dipakai bila art dunia gagal dimuat agar game tak rusak).
+ * Seluruh isi digambar ke offscreen SEKALI — bukan per frame. */
+function buildProcLayers(A,sky,far,mid){
+  let g=sky.getContext('2d');
   // LANGIT (tetap)
-  g=sky.getContext('2d');
   const sk=g.createLinearGradient(0,0,0,H);
   sk.addColorStop(0,A.sky[0]);sk.addColorStop(.6,A.sky[1]);sk.addColorStop(1,A.sky[2]);
   g.fillStyle=sk;g.fillRect(0,0,W,H);
@@ -128,8 +130,24 @@ function buildLayers(){
       g.beginPath();g.moveTo(x,y);g.lineTo(x+8,y-60);g.stroke();
       g.lineWidth=4;g.beginPath();g.moveTo(x+8,y-60);g.lineTo(x-16,y-88);g.moveTo(x+8,y-60);g.lineTo(x+30,y-86);g.stroke();}
   }
-  // DEPAN (1x): tanah + jalur + desa + dekorasi LAB
-  g=gnd.getContext('2d');
+} // buildProcLayers
+/* Lapis arena: art dunia di-prerender ke offscreen SEKALI saat arena dimuat
+ * (sky statis; far=_a+_b & mid=_a+_b digabung berdampingan). Per frame HANYA
+ * drawImage dengan offset parallax: sky 0x, far 0.25x, mid 0.55x, ground 1x. */
+function buildLayers(){
+  const A=ARENAS[G.arena];
+  const sky=mkCanvas(W,H),far=mkCanvas(WORLD_W,H),mid=mkCanvas(WORLD_W,H),gnd=mkCanvas(WORLD_W,H);
+  const WA=arenaArtReady(G.arena)?G.world.arena[G.arena]:null;
+  if(WA){
+    drawCover(sky.getContext('2d'),WA.sky,W);
+    if(!WA.farCv)WA.farCv=combine2(WA.far_a,WA.far_b);
+    drawCover(far.getContext('2d'),WA.farCv,WORLD_W+360);  // 0.25x: geser maks 360px
+    if(!WA.midCv)WA.midCv=combine2(WA.mid_a,WA.mid_b);
+    drawCover(mid.getContext('2d'),WA.midCv,WORLD_W+792); // 0.55x: geser maks 792px
+  }else buildProcLayers(A,sky,far,mid);
+  // DEPAN (1x): tanah + jalur + desa + dekorasi LAB (tetap prosedural)
+  const night=G.arena==='akatsuki';
+  let g=gnd.getContext('2d');
   const gr=g.createLinearGradient(0,300,0,H);
   gr.addColorStop(0,A.ground[0]);gr.addColorStop(1,A.ground[1]);
   g.fillStyle=gr;g.fillRect(0,300,WORLD_W,H-300);
@@ -148,7 +166,12 @@ function buildLayers(){
     g.fillStyle=night?'#ffb03c':'#ff9a3e';
     g.beginPath();g.arc(x,LANE_TOP-78,6,0,7);g.fill();
   }
-  G.layers={sky,far,mid,gnd};
+  G.layers={sky,far,mid,gnd,_proc:!WA};
+  /* awan bergerak (strip cloud.png 4 frame @160px) — 3 sprite melayang di langit */
+  G.clouds=[];
+  const cc=G.world.amb.cloud;
+  if(cc&&cc.width)for(let i=0;i<3;i++)
+    G.clouds.push({x:rnd(-100,W),y:rnd(30,150),spd:rnd(4,10),ft:rnd(0,4)});
   decorateGround();
 }
 function statue(g,x,ybase,color,dir){
@@ -161,14 +184,122 @@ function statue(g,x,ybase,color,dir){
   g.restore();
 }
 function loadImg(src){const im=new Image();im.src=src;return im;}
+/* ================= ART DUNIA (assets/world/) =================
+ * 34 file: sky/far_a/far_b/mid_a/mid_b per arena (JPG), dekorasi +
+ * strip ambient 4-frame + tower/base/dummy/minion (PNG, bg #FF00FF).
+ * Strategi 60fps: muat via Image() SEKALI di init(), chroma-key SEKALI,
+ * gabung _a+_b SEKALI, gambar ke offscreen SEKALI saat arena dimuat;
+ * hot path per frame HANYA drawImage. Bila ada gambar gagal (onerror/
+ * timeout) -> null -> renderer prosedural lama dipakai (game tak rusak). */
+const WORLD_V=1; // ?v= art dunia — WAJIB naik bila isi file berubah
+const WORLD_PARTS=['sky','far_a','far_b','mid_a','mid_b'];
+const AMBIENT_STRIP={konoha:'petal',lembah:'sparkle',akatsuki:'firefly'};
+function imgP(src){return new Promise((res,rej)=>{
+  try{const im=new Image();im.onload=()=>res(im);im.onerror=()=>rej(new Error('img:'+src));im.src=src;}
+  catch(e){rej(e);}});}
+function imgTimeout(p,ms){return Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))]);}
+function chromaKeyCanvas(img){
+  // magenta #FF00FF -> transparan (toleransi sama dgn js/sprite.js)
+  const w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+  const c=mkCanvas(w,h),g=c.getContext('2d');
+  if(!g)return null;
+  g.drawImage(img,0,0);
+  let id;try{id=g.getImageData(0,0,w,h);}catch(e){return c;}
+  const d=id.data;
+  for(let i=0;i<d.length;i+=4)if(d[i]>=200&&d[i+2]>=200&&d[i+1]<=110)d[i+3]=0;
+  g.putImageData(id,0,0);return c;
+}
+function arenaArtReady(a){
+  const r=G.world.arena[a];
+  return !!(r&&r.sky&&r.far_a&&r.far_b&&r.mid_a&&r.mid_b);
+}
+function combine2(a,b){
+  // dua Image berdampingan -> satu canvas (dipanggil SEKALI per arena)
+  const aw=a.naturalWidth||a.width,ah=a.naturalHeight||a.height;
+  const bw=b.naturalWidth||b.width,bh=b.naturalHeight||b.height;
+  const c=mkCanvas(aw+bw,Math.max(ah,bh)),g=c.getContext('2d');
+  g.drawImage(a,0,0);g.drawImage(b,aw,0);return c;
+}
+function drawCover(g,img,dw){
+  // gambar selebar dw px, aspek dijaga, rata atas (kanvas memotong sisanya)
+  const sw=img.naturalWidth||img.width,sh=img.naturalHeight||img.height;
+  if(!sw||!sh)return;
+  g.drawImage(img,0,0,sw,sh,0,0,dw,sh*dw/sw);
+}
+function preloadWorld(){
+  if(G.world.pre)return G.world.pre;
+  const Wd=G.world;
+  const one=(file,keyed)=>imgTimeout(imgP('assets/world/'+file+'?v='+WORLD_V),7000)
+    .then(im=>keyed?chromaKeyCanvas(im):im).catch(()=>null);
+  const jobs=[];
+  for(const a of Object.keys(AMBIENT_STRIP)){
+    Wd.arena[a]=Wd.arena[a]||{};
+    for(const part of WORLD_PARTS)
+      jobs.push(one(a+'_'+part+'.jpg',false).then(im=>{Wd.arena[a][part]=im;}).catch(()=>{}));
+  }
+  for(const n of ['lantern','banner_lab','sakura_tree'])
+    jobs.push(one(n+'.png',true).then(c=>{Wd.decor[n]=c;}).catch(()=>{}));
+  for(const n of ['petal','firefly','sparkle','cloud'])
+    jobs.push(one(n+'.png',true).then(c=>{Wd.amb[n]=c;}).catch(()=>{}));
+  for(const n of ['tower_ally','tower_ally_broken','tower_foe','tower_foe_broken',
+                  'base_ally','base_ally_broken','base_foe','base_foe_broken'])
+    jobs.push(one(n+'.png',true).then(c=>{Wd.struct[n]=c;}).catch(()=>{}));
+  jobs.push(one('dummy.png',true).then(c=>{Wd.dummy=c;}).catch(()=>{}));
+  jobs.push(one('dummy_hit.png',true).then(c=>{Wd.dummyHit=c;}).catch(()=>{}));
+  jobs.push(one('minion_ally.png',true).then(c=>{Wd.minion[0]=c;}).catch(()=>{}));
+  jobs.push(one('minion_foe.png',true).then(c=>{Wd.minion[1]=c;}).catch(()=>{}));
+  G.world.pre=Promise.all(jobs).then(()=>{
+    Wd.ready=true;
+    // art tiba di tengah battle -> bangun ulang lapis arena yg prosedural
+    try{if(G.layers&&G.layers._proc&&arenaArtReady(G.arena))buildLayers();}catch(e){}
+  }).catch(()=>{Wd.ready=true;});
+  return G.world.pre;
+}
+/* ---- partikel ambient: pool tetap 40, tanpa alokasi di loop, tanpa shadowBlur ---- */
+function spawnAmbient(){
+  const strip=AMBIENT_STRIP[G.arena]||'petal';
+  const cv=G.world.amb[strip];
+  if(!(cv&&cv.width)){
+    /* fallback prosedural lama (kotak warna) */
+    const A=ARENAS[G.arena],q=pnew();if(!q)return;
+    q.x=rnd(G.cam-50,G.cam+W+50);q.y=rnd(60,320);
+    q.vx=rnd(-14,-4);q.vy=rnd(4,14);q.life=rnd(2,4);q.maxlife=4;q.grav=0;
+    q.color=A.ambient==='petal'?'#f7b8d0':A.ambient==='leaf'?'#e8a13c':'#ff6a4d';
+    q.size=rnd(2,4);G.parts.push(q);return;
+  }
+  let a=null;
+  for(let i=0;i<G.amb.length;i++)if(!G.amb[i].on){a=G.amb[i];break;}
+  if(!a)return; // pool penuh
+  a.on=true;a.strip=strip;
+  a.x=rnd(G.cam-40,G.cam+W+40);a.y=rnd(50,330);
+  a.ft=rnd(0,4);a.ph=rnd(0,6.28);
+  if(strip==='petal'){a.vx=rnd(-16,-6);a.vy=rnd(10,22);a.size=rnd(15,24);a.life=a.max=rnd(3,5);}
+  else if(strip==='firefly'){a.vx=rnd(-9,9);a.vy=rnd(-7,7);a.size=rnd(11,17);a.life=a.max=rnd(3,5);}
+  else{a.vx=rnd(-11,-3);a.vy=rnd(3,9);a.size=rnd(11,19);a.life=a.max=rnd(2.5,4);}
+}
+function updateAmbient(dt){
+  for(let i=0;i<G.amb.length;i++){const a=G.amb[i];if(!a.on)continue;
+    a.life-=dt;if(a.life<=0){a.on=false;continue;}
+    a.ft+=dt*6;a.x+=a.vx*dt;a.y+=a.vy*dt;
+    if(a.strip==='petal')a.x+=Math.sin(G.time*2.5+a.ph)*14*dt;
+    else if(a.strip==='firefly'){a.x+=Math.sin(G.time*1.8+a.ph)*10*dt;a.y+=Math.cos(G.time*2.2+a.ph)*8*dt;}
+  }
+}
 function decorateGround(){
   const g=G.layers.gnd.getContext('2d');
+  const I=G.imgs,D=G.world.decor;
+  /* gnd digambar ulang tiap arena -> bendera _drawn harus di-reset
+   * (perbaikan bug: dekorasi hilang saat ganti arena kedua dst.) */
+  for(const k in I)if(I[k])I[k]._drawn=false;
+  for(const k in D)if(D[k])D[k]._drawn=false;
   const put=(im,x,y,w,h,frame)=>{
     if(!im||!im.naturalWidth||im._drawn)return;im._drawn=true;
     if(frame){g.fillStyle='#5e4630';g.fillRect(x-8,y-8,w+16,h+16);
       g.fillStyle='#2c1f14';g.fillRect(x-4,y-4,w+8,h+8);}
     g.drawImage(im,x,y,w,h);};
-  const I=G.imgs;
+  const putK=(cv,x,y,w,h)=>{ // canvas hasil chroma-key (tanpa naturalWidth)
+    if(!cv||!cv.width)return;
+    g.drawImage(cv,x,y,w,h);};
   put(I.pain,700,170,96,128,true);
   put(I.zetsu,1604,170,96,128,true);
   const banners=[[I.nahwuos,350],[I.aksara,2050],[I.spec,950],[I.mynahwu,1450]];
@@ -177,6 +308,17 @@ function decorateGround(){
     g.fillStyle='#4a3520';g.fillRect(x-3,240,6,80);
     g.drawImage(im,x-45,190,90,52);
     g.strokeStyle='#22c55e';g.lineWidth=3;g.strokeRect(x-45,190,90,52);}
+  /* ---- dekorasi LAB baru dari art dunia ---- */
+  putK(D.banner_lab,1052,196,130,88);           // spanduk monogram A hijau neon
+  for(const lx of [560,1840]){                  // lampion gantung di tiang kayu
+    g.fillStyle='#3a2c1c';g.fillRect(lx-3,LANE_TOP-84,6,84);
+    g.fillStyle='#241a10';g.fillRect(lx-16,LANE_TOP-90,32,6);
+    putK(D.lantern,lx-17,LANE_TOP-84,34,56);
+  }
+  if(G.arena!=='akatsuki'){                     // pohon sakura (bukan di malam Akatsuki)
+    putK(D.sakura_tree,236,LANE_TOP-104,100,98);
+    putK(D.sakura_tree,2164,LANE_TOP-104,100,98);
+  }
 }
 
 /* ---------- entitas ---------- */
@@ -203,9 +345,11 @@ function makeMinion(team,strong){
     color:team===0?'#3a6bd8':'#d83a3a'};
 }
 function makeDummy(){
-  return{kind:'dummy',team:1,x:WORLD_W/2+260,y:(LANE_TOP+LANE_BOT)/2,dir:-1,
+  /* PERBAIKAN QA: dulu di x=WORLD_W/2+260 (di luar viewport awal) sehingga
+   * "tidak muncul" bagi pemain; kini dekat spawn agar langsung terlihat. */
+  return{kind:'dummy',team:1,x:SPAWN_X+465,y:(LANE_TOP+LANE_BOT)/2,dir:-1,
     hp:400,maxhp:400,alive:true,animT:0,pose:'idle',pt:0,kbx:0,kby:0,
-    guard:100,guardMax:100,guardBreakT:0};
+    guard:100,guardMax:100,guardBreakT:0,hitT:-9};
 }
 function makeTower(team,x,inner){
   return{kind:'tower',team,x,y:(LANE_TOP+LANE_BOT)/2,inner:!!inner,
@@ -233,7 +377,13 @@ function ftext(x,y,str,color,size){
   G.texts.push({x,y,str,color:color||'#fff',size:size||15,life:1});
 }
 function after(t,fn){G.delayed.push({t:G.time+t,fn});}
-function banner(txt,sub,big){G.banner={txt,sub,big:!!big};G.bannerT=2.6;}
+/* Banner pengumuman: timing WALL-CLOCK (performance.now), bukan fixed-step.
+ * Dijamin: opacity PENUH 1.5 dtk + fade 1.1 dtk (total 2.6 dtk) walau HP lag
+ * (catch-up fixed-step 3x/frame dulu bisa memangkas durasi hingga 1/3). */
+function banner(txt,sub,big,dur){
+  G.banner={txt,sub,big:!!big,born:performance.now(),dur:dur||2.6};
+  G.bannerT=G.banner.dur; /* kompatibilitas baca luar */
+}
 /* easeOutBack murni — untuk pop animasi banner besar */
 function easeOutBack(x){const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2);}
 
@@ -259,10 +409,11 @@ function damage(t,dmg,src){
   }
   /* ---- guard meter boneka latihan (mode training) ---- */
   if(t.kind==='dummy'){
+    t.hitT=G.time; // picu sprite dummy_hit sesaat
     t.guard=Math.max(0,t.guard-dmg*0.35);
     if(t.guard<=0&&t.guardBreakT<=0){
       t.guardBreakT=2;
-      banner('GUARD BREAK!','Boneka lengah — damage +50%');
+      banner('GUARD BREAK!','Boneka lengah — damage +50%',true);
       NWAudio.hit();
     }
   }
@@ -565,20 +716,16 @@ function update(dt){
   G.time+=dt;
   for(let i=G.delayed.length-1;i>=0;i--)
     if(G.time>=G.delayed[i].t){const d=G.delayed.splice(i,1)[0];d.fn();}
-  if(G.bannerT>0)G.bannerT-=dt;
+  /* bannerT kini wall-clock di render(); tak lagi dikuras fixed-step */
   if(G.koCd>0)G.koCd-=dt;
   /* HITSTOP: bekukan dunia 60-90ms saat pukulan connect (juice ala fighting) */
   if(G.hitstop>0){G.hitstop-=dt;updateFx(dt);return;}
-  // ambient arena
+  // ambient arena: strip 4-frame via pool (tanpa alokasi, tanpa shadowBlur); awan melayang
   G.ambientT-=dt;
-  if(G.ambientT<=0){G.ambientT=0.35;
-    const A=ARENAS[G.arena];
-    const q=pnew();if(q){
-      q.x=rnd(G.cam-50,G.cam+W+50);q.y=rnd(60,320);
-      q.vx=rnd(-14,-4);q.vy=rnd(4,14);q.life=rnd(2,4);q.maxlife=4;q.grav=0;
-      q.color=A.ambient==='petal'?'#f7b8d0':A.ambient==='leaf'?'#e8a13c':'#ff6a4d';
-      q.size=rnd(2,4);G.parts.push(q);}
-  }
+  if(G.ambientT<=0){G.ambientT=0.3;spawnAmbient();}
+  updateAmbient(dt);
+  if(G.clouds)for(const c of G.clouds){c.ft+=dt*3;c.x-=c.spd*dt;
+    if(c.x<-230){c.x=W+rnd(0,240);c.y=rnd(30,150);}}
   // wave minion
   if(G.mode!=='training'){
     G.waveT-=dt;
@@ -704,6 +851,21 @@ function drawNinja(g,e,scale){
   g.restore();
 }
 function drawFighter(g,e){
+  /* minion: strip 4 frame chibi genin (art dunia); fallback prosedural bila gagal */
+  if(e.kind==='minion'){
+    const cv=G.world.minion[e.team];
+    if(cv&&cv.width){
+      const fi=Math.floor((e.animT||0)*8)%4,s=76;
+      g.save();g.translate(e.x,e.y);
+      g.fillStyle='rgba(0,0,0,0.26)';
+      g.beginPath();g.ellipse(0,-2,16,5,0,0,Math.PI*2);g.fill();
+      g.scale(e.dir>=0?1:-1,1);
+      g.drawImage(cv,fi*128,0,128,128,-s/2,-s,s,s);
+      g.restore();
+      drawHPBar(g,e.x,e.y-100,34,e.hp/e.maxhp);
+      return;
+    }
+  }
   /* sprite sheet bila tersedia, fallback prosedural bila belum */
   if(e.kind==='hero'&&window.NWSprite&&NWSprite.has(e.charId)){
     try{if(NWSprite.draw(g,e)){afterSpriteBars(g,e);return;}}catch(err){}
@@ -712,39 +874,52 @@ function drawFighter(g,e){
   drawNinja(g,e,e.kind==='hero'?1:0.72);
   afterSpriteBars(g,e);
 }
+/* Bar HP/chakra SELALU digambar DI ATAS kepala (tak pernah menutupi wajah).
+ * Puncak sprite: hero = e.y-120 (NWSprite CHAR_H=120), minion NWFighter = e.y-98.
+ * Offset 15-22px di atas puncak -> aman dari rambut/ikat kepala. */
 function afterSpriteBars(g,e){
   if(e.kind==='hero'){
-    drawHPBar(g,e.x,e.y-92,64,e.hp/e.maxhp);
-    g.fillStyle='rgba(0,0,0,.55)';g.fillRect(e.x-32,e.y-80,64,5);
-    g.fillStyle='#2ea8ff';g.fillRect(e.x-31,e.y-79,62*(e.chakra/e.maxchakra),3);
-  }else drawHPBar(g,e.x,e.y-58,34,e.hp/e.maxhp);
+    drawHPBar(g,e.x,e.y-152,64,e.hp/e.maxhp);          // -152..-142 (22px di atas puncak)
+    g.fillStyle='rgba(0,0,0,.55)';g.fillRect(e.x-32,e.y-140,64,5);
+    g.fillStyle='#2ea8ff';g.fillRect(e.x-31,e.y-139,62*(e.chakra/e.maxchakra),3);
+  }else drawHPBar(g,e.x,e.y-124,34,e.hp/e.maxhp);      // -124..-114 (16px di atas kepala minion)
 }
 function drawDummy(g,d){
+  /* sprite boneka kayu art dunia (dummy_hit 0.28 dtk usai dipukul); fallback prosedural */
+  const hit=G.time-(d.hitT||-9)<0.28;
+  const cv=hit?G.world.dummyHit:G.world.dummy;
   g.save();g.translate(d.x,d.y);
-  /* bayangan elips lembut */
+  /* bayangan elips lembut (tanpa shadowBlur) */
   g.fillStyle='rgba(0,0,0,0.26)';
   g.beginPath();g.ellipse(0,-2,26,7,0,0,Math.PI*2);g.fill();
-  g.fillStyle='#7a5a38';g.fillRect(-10,-90,20,90);
-  g.fillStyle='#8f6c46';g.beginPath();g.arc(0,-100,14,0,7);g.fill();
-  g.strokeStyle='#5e4630';g.lineWidth=4;
-  g.beginPath();g.moveTo(-26,-70);g.lineTo(26,-70);g.moveTo(-24,-50);g.lineTo(24,-50);g.stroke();
+  if(cv&&cv.width){
+    const s=0.55,w=cv.width*s,h=cv.height*s;
+    g.drawImage(cv,-w/2,-h,w,h);
+  }else{
+    g.fillStyle='#7a5a38';g.fillRect(-10,-90,20,90);
+    g.fillStyle='#8f6c46';g.beginPath();g.arc(0,-100,14,0,7);g.fill();
+    g.strokeStyle='#5e4630';g.lineWidth=4;
+    g.beginPath();g.moveTo(-26,-70);g.lineTo(26,-70);g.moveTo(-24,-50);g.lineTo(24,-50);g.stroke();
+  }
   g.restore();
-  drawHPBar(g,d.x,d.y-132,90,d.hp/d.maxhp);
+  /* seluruh indikator di ATAS kepala boneka (puncak kepala = d.y-114):
+     label -> bar HP -> bar guard, tak ada yang menutupi wajah */
+  drawHPBar(g,d.x,d.y-152,90,d.hp/d.maxhp);
   g.fillStyle='#fff';g.font='bold 12px sans-serif';g.textAlign='center';
-  g.fillText('BONEKA LATIHAN',d.x,d.y-140);
+  g.fillText('BONEKA LATIHAN',d.x,d.y-160);
   /* guard meter: biru = bertahan, merah berkedip = break */
-  g.fillStyle='rgba(0,0,0,.55)';g.fillRect(d.x-45,d.y-118,90,8);
+  g.fillStyle='rgba(0,0,0,.55)';g.fillRect(d.x-45,d.y-140,90,8);
   g.fillStyle=d.guardBreakT>0?(Math.floor(G.time*8)%2?'#ff5e5e':'#ffb03c'):'#2ea8ff';
-  g.fillRect(d.x-44,d.y-117,88*clamp(d.guard/d.guardMax,0,1),6);
+  g.fillRect(d.x-44,d.y-139,88*clamp(d.guard/d.guardMax,0,1),6);
   g.fillStyle='#cfe8ff';g.font='bold 9px sans-serif';
-  g.fillText(d.guardBreakT>0?'GUARD BREAK!':'GUARD',d.x,d.y-110);
+  g.fillText(d.guardBreakT>0?'GUARD BREAK!':'GUARD',d.x,d.y-124);
 }
 /* penghitung kombo di dekat karakter (x2, x3...) — pop membesar saat fresh */
 function drawCombo(g,h){
   const n=h.comboN;if(n<2)return;
   const pop=1+0.3*Math.min(1,h.comboT||0);
   g.save();
-  g.translate(h.x,h.y-108);
+  g.translate(h.x,h.y-172); /* di atas bar HP (bar di y-152), tak menutupi wajah */
   g.scale(pop,pop);
   g.font='bold 20px sans-serif';g.textAlign='center';
   g.fillStyle='#000';g.fillText('x'+n,2,2);
@@ -753,6 +928,23 @@ function drawCombo(g,h){
   g.restore();
 }
 function drawTower(g,t){
+  /* sprite art dunia (utuh/rusak); fallback kotak prosedural bila gagal dimuat */
+  const key=t.team===0?(t.alive?'tower_ally':'tower_ally_broken')
+                      :(t.alive?'tower_foe':'tower_foe_broken');
+  const cv=G.world.struct[key];
+  if(cv&&cv.width){
+    const h=t.alive?150:80,w=h*(cv.width/cv.height);
+    g.save();g.translate(t.x,t.y);
+    g.fillStyle='rgba(0,0,0,0.26)';
+    g.beginPath();g.ellipse(0,-2,w*0.4,6,0,0,Math.PI*2);g.fill();
+    g.drawImage(cv,-w/2,-h,w,h);
+    const prot=t.alive&&t.inner&&G.towers.find(x=>x.team===t.team&&!x.inner&&x.alive);
+    if(prot){g.strokeStyle='rgba(126,224,255,.7)';g.lineWidth=3;
+      g.beginPath();g.arc(0,-h/2,70+Math.sin(G.time*4)*4,0,7);g.stroke();}
+    g.restore();
+    if(t.alive)drawHPBar(g,t.x,t.y-h-40,90,t.hp/t.maxhp);
+    return;
+  }
   g.save();g.translate(t.x,t.y);
   const w=64,h=130;
   const prot=t.inner&&G.towers.find(x=>x.team===t.team&&!x.inner&&x.alive);
@@ -765,9 +957,23 @@ function drawTower(g,t){
   if(prot){g.strokeStyle='rgba(126,224,255,.7)';g.lineWidth=3;
     g.beginPath();g.arc(0,-h/2,70+Math.sin(G.time*4)*4,0,7);g.stroke();}
   g.restore();
-  drawHPBar(g,t.x,t.y-h-46,90,t.hp/t.maxhp);
+  if(t.alive)drawHPBar(g,t.x,t.y-h-46,90,t.hp/t.maxhp);
 }
 function drawBase(g,b){
+  /* sprite kristal art dunia (utuh/rusak); fallback emblem prosedural bila gagal */
+  const key=b.team===0?(b.alive?'base_ally':'base_ally_broken')
+                      :(b.alive?'base_foe':'base_foe_broken');
+  const cv=G.world.struct[key];
+  if(cv&&cv.width){
+    const h=b.alive?120:70,w=h*(cv.width/cv.height);
+    g.save();g.translate(b.x,b.y);
+    g.fillStyle='rgba(0,0,0,0.26)';
+    g.beginPath();g.ellipse(0,-2,w*0.42,7,0,0,Math.PI*2);g.fill();
+    g.drawImage(cv,-w/2,-h,w,h);
+    g.restore();
+    if(b.alive)drawHPBar(g,b.x,b.y-h-30,120,b.hp/b.maxhp);
+    return;
+  }
   g.save();g.translate(b.x,b.y);
   const alive=b.alive;
   /* emblem kecil di ATAS garis tanah — tidak menutupi fighter (QA #4) */
@@ -783,7 +989,7 @@ function drawBase(g,b){
   g.fillStyle=alive?(b.team===0?'rgba(46,95,138,.5)':'rgba(138,46,46,.5)'):'rgba(80,80,80,.4)';
   g.beginPath();g.ellipse(0,-4,52,10,0,0,7);g.fill();
   g.restore();
-  drawHPBar(g,b.x,b.y-150,120,b.hp/b.maxhp);
+  if(b.alive)drawHPBar(g,b.x,b.y-150,120,b.hp/b.maxhp);
 }
 function render(){
   const g=G.ctx,L=G.layers;
@@ -799,6 +1005,13 @@ function render(){
   const cam=Math.round(G.cam+sx);
   // langit tetap
   g.drawImage(L.sky,0,0);
+  // awan bergerak (strip cloud.png, 4 frame @160px) — hanya bila art siap
+  const cl=G.world.amb.cloud;
+  if(cl&&cl.width&&G.clouds)for(const c of G.clouds){
+    g.globalAlpha=0.85;
+    g.drawImage(cl,Math.floor(c.ft)%4*160,0,160,160,c.x,c.y,200,200);
+  }
+  g.globalAlpha=1;
   // parallax
   g.drawImage(L.far,-Math.round(G.cam*0.25),0);
   g.drawImage(L.mid,-Math.round(G.cam*0.55),0);
@@ -815,8 +1028,9 @@ function render(){
     g.fillStyle=z.color;g.globalAlpha=0.35+0.1*Math.sin(G.time*8);
     g.beginPath();g.arc(z.x,z.y,z.r,0,7);g.fill();g.globalAlpha=1;
   }
-  for(const b of G.bases)if(b.alive)drawBase(g,b);
-  for(const t of G.towers)if(t.alive)drawTower(g,t);
+  /* struktur hancur tetap digambar sebagai reruntuhan (state rusak) */
+  for(const b of G.bases)drawBase(g,b);
+  for(const t of G.towers)drawTower(g,t);
   if(G.dummy&&G.dummy.alive)drawDummy(g,G.dummy);
   const ents=[];
   for(const h of G.fighters)if(h.alive)ents.push(h);
@@ -841,6 +1055,15 @@ function render(){
     g.fillStyle=q.color;g.fillRect(q.x-q.size/2,q.y-q.size/2,q.size,q.size);
   }
   g.globalAlpha=1;
+  /* partikel ambient art dunia (pool 40, frame strip) */
+  for(const a of G.amb){
+    if(!a.on)continue;
+    const acv=G.world.amb[a.strip];if(!(acv&&acv.width))continue;
+    g.globalAlpha=clamp(a.life/a.max,0,1)*0.95;
+    const s=a.size;
+    g.drawImage(acv,Math.floor(a.ft)%4*128,0,128,128,a.x-s/2,a.y-s/2,s,s);
+  }
+  g.globalAlpha=1;
   g.textAlign='center';
   for(const t of G.texts){
     g.globalAlpha=clamp(t.life,0,1);
@@ -857,30 +1080,35 @@ function render(){
   structBars(g);
   // minimap
   minimap(g);
-  // banner tengah (big = pengumuman layar besar: FIGHT! / K.O.! / pemenang)
-  if(G.bannerT>0&&G.banner){
+  // banner tengah (big = pengumuman layar besar: FIGHT! / K.O.! / GUARD BREAK! / pemenang)
+  // opacity penuh 1.5 dtk lalu fade — durasi dijamin wall-clock (anti-lag HP)
+  if(G.banner){
+    const bAge=(performance.now()-G.banner.born)/1000;
+    if(bAge>=G.banner.dur){G.banner=null;G.bannerT=0;}
+    else{
     g.save();
-    g.globalAlpha=clamp(G.bannerT,0,1);
-    g.textAlign='center';
+    const FULL=1.5; /* detik opacity penuh */
+    g.globalAlpha=bAge<FULL?1:clamp(1-(bAge-FULL)/Math.max(.3,G.banner.dur-FULL),0,1);
+    g.textAlign='center';g.textBaseline='middle';g.lineJoin='round';
+    /* teks ber-outline tebal agar terbaca di atas arena ramai */
+    const outlined=(txt,x,y,font,lw,fill)=>{
+      g.font=font;g.lineWidth=lw;g.strokeStyle='rgba(0,0,0,.92)';
+      g.strokeText(txt,x,y);
+      g.fillStyle=fill;g.fillText(txt,x,y);
+    };
     if(G.banner.big){
-      /* pop-in easeOutBack lalu menetap */
-      const ein=Math.min(1,(2.6-G.bannerT)*4);
+      /* pop-in easeOutBack 0.25 dtk lalu menetap */
+      const ein=Math.min(1,bAge*4);
       const pop=easeOutBack(ein);
-      g.translate(W/2,178);g.scale(pop,pop);
-      g.font='bold 64px sans-serif';
-      g.fillStyle='#000';g.fillText(G.banner.txt,3,3);
-      g.fillStyle='#ffd23e';g.fillText(G.banner.txt,0,0);
-      if(G.banner.sub){g.font='bold 20px sans-serif';
-        g.fillStyle='#000';g.fillText(G.banner.sub,1,35);
-        g.fillStyle='#fff';g.fillText(G.banner.sub,0,34);}
+      g.translate(W/2,H*0.36);g.scale(pop,pop);
+      outlined(G.banner.txt,0,0,'bold 72px Bungee,"Arial Black",sans-serif',13,'#ffd23e');
+      if(G.banner.sub)outlined(G.banner.sub,0,54,'bold 22px Rajdhani,sans-serif',6,'#ffffff');
     }else{
-      g.font='bold 44px sans-serif';
-      g.fillStyle='#000';g.fillText(G.banner.txt,W/2+2,182);
-      g.fillStyle='#ffd23e';g.fillText(G.banner.txt,W/2,180);
-      if(G.banner.sub){g.font='bold 18px sans-serif';g.fillStyle='#000';g.fillText(G.banner.sub,W/2+1,211);
-        g.fillStyle='#fff';g.fillText(G.banner.sub,W/2,210);}
+      outlined(G.banner.txt,W/2,H*0.36,'bold 46px Bungee,"Arial Black",sans-serif',9,'#ffd23e');
+      if(G.banner.sub)outlined(G.banner.sub,W/2,H*0.36+36,'bold 20px Rajdhani,sans-serif',5,'#ffffff');
     }
     g.restore();
+    }
   }
   const vg=g.createLinearGradient(0,0,W,0);
   vg.addColorStop(0,'rgba(0,0,0,.25)');vg.addColorStop(.06,'rgba(0,0,0,0)');
@@ -888,24 +1116,72 @@ function render(){
   g.fillStyle=vg;g.fillRect(0,0,W,H);
   g.restore();
 }
+/* Status struktur kedua tim: IKON visual (bukan teks mentah).
+ * Menara digambar sebagai menara kecil, base sebagai kristal; warna = warna tim
+ * bila utuh, abu-abu + silang merah bila hancur; bar HP tipis + label kecil. */
 function structBars(g){
-  // kiri: tim pemain, kanan: musuh — tower1, tower2, base
-  const draw=(x,team,align)=>{
-    const items=[];
-    for(const t of G.towers)if(t.team===team)items.push(['T',t.hp/t.maxhp]);
-    for(const b of G.bases)if(b.team===team)items.push(['B',b.hp/b.maxhp]);
-    g.font='bold 11px sans-serif';g.textAlign=align;
-    items.forEach((it,i)=>{
-      const bx=align==='left'?x:x-i*64;
-      const bx0=align==='left'?bx+i*64:bx;
-      g.fillStyle='rgba(0,0,0,.5)';g.fillRect(align==='left'?x+i*64:x-(i+1)*64,80,58,12);
-      g.fillStyle=it[1]>0.5?'#37e05b':(it[1]>0.25?'#ffd23e':'#ff5e5e');
-      const fx=align==='left'?x+i*64+1:x-(i+1)*64+1;
-      g.fillRect(fx,81,56*clamp(it[1],0,1),10);
-      g.fillStyle='#fff';g.fillText(it[0],(align==='left'?x+i*64:x-(i+1)*64)+8,90);
-    });
+  const teamCol=t=>t===0?'#3a6bd8':'#d83a3a';
+  const DEAD='#565660';
+  const drawTowerIcon=(x,y,s,color)=>{
+    const w=s*0.72,cx=x+w/2;
+    g.fillStyle='rgba(0,0,0,.55)';g.fillRect(x-3,y-3,w+6,s+8);
+    g.fillStyle=color;
+    g.fillRect(x,y+s*0.34,w,s*0.66);       /* badan menara */
+    g.fillRect(x-2,y+s*0.16,w+4,s*0.2);    /* mahkota */
+    g.fillRect(cx-2,y-1,4,s*0.2);          /* puncak */
+    g.fillStyle='rgba(0,0,0,.42)';
+    g.fillRect(cx-3,y+s*0.56,6,s*0.22);    /* pintu */
   };
-  draw(10,0,'left');draw(W-10,1,'right');
+  const drawBaseIcon=(x,y,s,color)=>{
+    const w=s*0.8,cx=x+w/2;
+    g.fillStyle='rgba(0,0,0,.55)';g.fillRect(x-3,y-3,w+6,s+8);
+    g.fillStyle=color;
+    g.beginPath();                        /* kristal */
+    g.moveTo(cx,y);g.lineTo(x+w,y+s*0.42);g.lineTo(cx,y+s);g.lineTo(x,y+s*0.42);
+    g.closePath();g.fill();
+    g.fillStyle='rgba(255,255,255,.45)';   /* kilau */
+    g.beginPath();
+    g.moveTo(cx,y);g.lineTo(x+w,y+s*0.42);g.lineTo(cx,y+s*0.42);
+    g.closePath();g.fill();
+    g.strokeStyle='rgba(0,0,0,.5)';g.lineWidth=1.5;
+    g.beginPath();g.moveTo(x,y+s*0.42);g.lineTo(x+w,y+s*0.42);g.stroke();
+  };
+  /* satu item: ikon + bar HP + label kecil. return lebar terpakai. */
+  const item=(x,team,align,label,ratio,alive,iconFn)=>{
+    const s=16,bw=42;
+    const bx=align==='left'?x:x-bw;
+    const iy=84;
+    iconFn(bx,iy,s,alive?teamCol(team):DEAD);
+    if(!alive){ /* silang merah = hancur */
+      g.strokeStyle='#ff5e5e';g.lineWidth=2.5;g.lineCap='round';
+      g.beginPath();
+      g.moveTo(bx-2,iy-2);g.lineTo(bx+s*0.8+2,iy+s+2);
+      g.moveTo(bx+s*0.8+2,iy-2);g.lineTo(bx-2,iy+s+2);
+      g.stroke();
+    }
+    g.fillStyle='rgba(0,0,0,.6)';g.fillRect(bx,iy+s+5,bw,5);
+    g.fillStyle=ratio>0.5?'#37e05b':(ratio>0.25?'#ffd23e':'#ff5e5e');
+    g.fillRect(bx+1,iy+s+6,(bw-2)*clamp(ratio,0,1),3);
+    g.font='bold 8px sans-serif';g.textBaseline='alphabetic';
+    g.textAlign=align==='left'?'left':'right';
+    const lx=align==='left'?bx:bx+bw,ly=iy+s+20;
+    g.fillStyle='#000';g.fillText(label,lx+(align==='left'?1:-1),ly+1);
+    g.fillStyle=alive?'#fff':'#8a8a95';g.fillText(label,lx,ly);
+    return bw+10;
+  };
+  /* kiri: tim pemain — kanan: tim musuh (urutan: tower luar, tower dalam, base) */
+  let lx=10;
+  const leftItems=[];
+  for(const t of G.towers)if(t.team===0)leftItems.push(['TOWER',t]);
+  for(const b of G.bases)if(b.team===0)leftItems.push(['BASE',b]);
+  for(const [label,o] of leftItems)
+    lx+=item(lx,0,'left',label,o.hp/o.maxhp,o.alive,label==='TOWER'?drawTowerIcon:drawBaseIcon);
+  let rx=W-10;
+  const rightItems=[];
+  for(const t of G.towers)if(t.team===1)rightItems.push(['TOWER',t]);
+  for(const b of G.bases)if(b.team===1)rightItems.push(['BASE',b]);
+  for(const [label,o] of rightItems)
+    rx-=item(rx,1,'right',label,o.hp/o.maxhp,o.alive,label==='TOWER'?drawTowerIcon:drawBaseIcon);
 }
 function minimap(g){
   const mw=220,mh=26,mx=W/2-mw/2,my=40;
@@ -947,7 +1223,7 @@ function loop(ts){
     for(let i=G.flashes.length-1;i>=0;i--){const f=G.flashes[i];
       f.t+=dt;if(f.t>=f.dur)G.flashes.splice(i,1);}
     if(G.shake>0)G.shake=Math.max(0,G.shake-30*dt);
-    if(G.bannerT>0)G.bannerT-=dt;
+    /* bannerT wall-clock: tak dikuras di sini */
   }
   render();
   if(window.NWUI)window.NWUI.tickHUD();
@@ -960,6 +1236,7 @@ function start(cfg){
   G.fighters=[];G.minions=[];G.projs=[];G.parts=[];G.zones=[];G.texts=[];G.delayed=[];
   G.flashes=[];
   G.dummy=null;
+  G.amb=[];for(let i=0;i<40;i++)G.amb.push({on:false}); // pool ambient tetap (tanpa alokasi di loop)
   G.towers=[makeTower(0,520,false),makeTower(0,1020,true),makeTower(1,1880,true),makeTower(1,1380,false)];
   // urut: luar dulu — tandai inner untuk proteksi
   G.bases=[makeBase(0),makeBase(1)];
@@ -1025,6 +1302,8 @@ window.NWGame={
     I.spec=loadImg('assets/logos/spec.webp'+V);
     I.mynahwu=loadImg('assets/logos/my-nahwu.webp'+V);
     for(const k in I){I[k].onload=()=>{if(G.layers)decorateGround();};}
+    /* art dunia: muat + chroma-key SEKALI di menu; arena tinggal pakai */
+    try{preloadWorld();}catch(e){}
   },
   ARENAS
 };
