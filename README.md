@@ -20,8 +20,9 @@ hancurkan tower serta base lawan!
 - **Kontrol manual penuh** — tanpa auto-attack. Joystick virtual + tombol
  ATTACK besar + 3 tombol jutsu + 1 tombol ultimate. Dash dengan ketuk
  2× arah pada joystick.
-- **Dipaksa landscape otomatis** — game selalu pas di layar HP miring,
- lengkap dengan tombol toggle orientasi & fullscreen di HUD.
+- **Orientasi bebas** — nyaman di portrait maupun landscape (tanpa paksa
+ landscape); portrait memakai kamera 620px yang mengikuti pemain,
+ lengkap dengan tombol fullscreen di HUD sebagai opsi.
 - **Juice premium** — hit-spark tiap pukulan kena, angka damage melayang,
  penghitung kombo, banner FIGHT! / K.O. / GUARD BREAK!, screen-shake saat
  ultimate, bayangan lembut di bawah karakter.
