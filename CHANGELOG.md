@@ -2,6 +2,53 @@
 
 Riwayat perubahan game per milestone. Format: tanggal — ringkasan.
 
+## 2026-10-06 — v16: STAGE SELECT + MUSIK ORIGINAL
+
+**STAGE SELECT ala referensi (index.html, css/style.css v17, js/ui.js v18):**
+1. Layar pilih arena dirombak: grid thumbnail 4 kolom + panel preview besar kanan (gambar + nama + deskripsi), thumbnail terpilih border merah.
+2. 3 arena playable (Konoha, Lembah Akhir, Malam Akatsuki) + 5 slot "SEGERA HADIR" (gembok SVG).
+3. Thumbnail komposit asli dari art arena (sky+mid+ground, 16:9) — `assets/stages/*.jpg` + `*_thumb.jpg`, semua <55KB.
+4. Rapi portrait (preview atas, grid bawah) & landscape.
+
+**MUSIK (js/audio.js v4, ditulis ulang — 100% synth original, bukan OST):**
+1. 3 track komposisi sendiri gaya epik-ninja (acuan gaya: cover OST Naruto Shippuden Crystilo & Vasaria Project — hanya rasanya, bukan melodinya): MENU (60 BPM, seruling+string+choir+taiko lembut, loop), BATTLE (132 BPM, taiko drive+riff string+brass, loop), VICTORY (jingle heroik one-shot).
+2. SFX synth: pukulan, jutsu, ledakan, klik/hover UI, fanfare menang, sting kalah.
+3. Toggle NYATA: MUSIK on/off (BGM), SUARA on/off (SFX), persist localStorage. Musik berhenti saat pause, lanjut saat resume. Inisialisasi audio pada interaksi pertama (autoplay policy).
+4. Override: `assets/music/{menu,battle,victory}.mp3` — bila Bos menaruh file legal, dipakai; bila tidak, synth. Panduan di ASSETS.md, CARA-BERMAIN.md, assets/music/README.md (+ catatan hak cipta).
+
+## 2026-10-06 — v15c: FIX QA (NPC, label, letterbox desktop)
+
+**Temuan QA & perbaikan (js/game.js v14, assets/world/npc/npc_villager.png):**
+1. Sprite NPC perempuan terpotong di tepi atas: strip fallback dibangun ulang (192x208) — baris perempuan digeser dengan headroom 8px di atas kepala; kode gambar disesuaikan (sel 64x104, kaki tetap di y=180).
+2. Label "BASE" bertumpuk sprite NPC: blok status struktur (ikon+bar+label) digeser ke y=160, di bawah zona animasi NPC (kaki di y=180) — berlaku simetris kiri & kanan.
+3. Desktop lebar: gambar dunia kini di-clip ke area pandang 960x540 (strip hijau di bilah letterbox hilang); pengisi letterbox diganti gradien gelap rapi (#101725→#030405, di-cache) bukan hitam pekat.
+
+## 2026-10-06 — v15: MENU + HUD ALA NARUTO SENKI (referensi Bos)
+
+**Latar:** 8 screenshot referensi Naruto Senki asli v1.2Beta dari Bos — ditiru komponennya.
+
+**MENU (index.html, css/style.css v16, js/ui.js v17):**
+1. Judul full-art (`assets/title-bg.jpg`) + tombol orientasi sejak layar judul.
+2. Mode select: kartu besar ber-art background per mode (bukan kartu polos).
+3. Character select ala referensi: grid portrait kiri + splash art besar kanan + nama besar + panah kiri/kanan.
+4. Pause menu restyle: panel gelap, "Kembali Bertarung / Mulai Ulang / Kembali ke Menu / MUSIK:ON|OFF / SUARA:ON|OFF / Layar Penuh".
+5. Quit dialog: "Keluar dan kembali ke menu utama? YA/TIDAK" + scoreboard live (portrait + kill/tumbang + timer + koin).
+6. End screen: scoreboard rapi (tim KITA/MUSUH, penanda KAMU, kolom KILL & TUMBANG).
+7. HUD ala screenshot referensi: kiri atas portrait+angka HP+energy+dot jutsu+koin; tengah atas portrait tim+skor kill; kanan atas ikon tower SVG+kill+tumbang+timer; joystick kiri bawah; kanan bawah 4 tombol jutsu lingkaran + tombol ATTACK besar berikon tinju SVG. Semua ikon SVG satu gaya, anti-emoji.
+8. Rapi portrait 360px & landscape.
+
+**GAMEPLAY (js/game.js v13):**
+1. Tower & base = MONUMEN BATU + semak ala referensi (`monument.png`/`monument_broken.png`, fallback prosedural prerender).
+2. Minion = prajurit berbaris (`soldier_ally/foe.png`, fallback strip lama) — frame adaptif, HP bar di atas.
+3. Ground = tekstur JPG baru tileable (prioritas) dengan fallback PNG lama.
+4. NPC strip baru anime 4-frame idle (prioritas) dengan fallback lama.
+5. Pause: game-time berhenti total. Scoreboard: kill & tumbang per petarung (`NWGame.scoreboard()`).
+6. Balance: match war 3v3 ~4m15s (tower/base lebih kuat, armor struktur 0.3x).
+7. Performa: nol alokasi hot loop, prerender offscreen, pooling partikel — test hijau.
+
+**ASET BARU (18 file, semua <55KB):** splash 6 karakter, mode latihan/versus, title-bg, ground 3 arena (JPG), monumen utuh/hancur, prajurit 2 tim, NPC warga/penjaga.
+**GAP:** modes/war.jpg & modes/survival.jpg ditolak generator gambar (kebijakan konten) — kartu mode pakai fallback gradient sampai ada konsep alternatif.
+
 ## 2026-10-06 — v15b: WORLD ART + NPC (integrasi koordinator)
 
 **Latar:** Kritik Bos "peta cuma warna bukan gambar" + NPC placeholder.
