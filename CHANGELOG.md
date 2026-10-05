@@ -2,6 +2,30 @@
 
 Riwayat perubahan game per milestone. Format: tanggal — ringkasan.
 
+## 2026-10-05 — v10: ANTI EMOJI total (aturan keras Bos, permanen)
+
+**Latar:** Bos menetapkan aturan permanen — tidak boleh ada emoji di mana pun
+di game; seluruh ikon wajib SVG/gambar ikon.
+
+**Yang berubah (index.html, css/style.css v11→v12, js/ui.js v11→v12,
+version.json v9→v10):**
+
+1. **Set ikon SVG inline** (`ICON` di js/ui.js + inline di index.html),
+   satu gaya konsisten: `viewBox` 24, `fill="none"`,
+   `stroke="currentColor"` 2.4, round caps/joins — mengikuti design system.
+   Ikon: volume-on, volume-off/mute, tutup (X), putar/orientasi, gembok,
+   ceklis, koin, kembali, (fullscreen sudah SVG sebelumnya).
+2. **Tombol HUD & judul**: 🔊/🔇 → SVG volume (toggle via `innerHTML`);
+   ⟳ → SVG putar; ✕ → SVG X. Ukuran seragam 24px via `.iconbtn svg`.
+3. **Gembok karakter**: 🔒 di kartu & toast → SVG gembok (+ CSS
+   `.lockicon svg`, `.locktag svg` agar alignment rapi di semua ukuran).
+4. **Ceklis difficulty**: `content:' ✓'` di CSS → ceklis SVG sebagai
+   `background` data-URI (emas, sejajar teks).
+5. **Koin**: teks "KOIN: N" kini diawali ikon koin SVG (menu, HUD, coinbar).
+6. **Dokumen** (CARA-BERMAIN, README, ASSETS): emoji dihapus/diganti kata.
+7. **Verifikasi**: grep emoji di file UI = nol; `node --check` OK;
+   `test/smoke.js` 69/69; `test/integration.js` 28/28.
+
 ## 2026-10-05 — v9: integrasi art dunia + renderer parallax prerender
 
 **Latar:** tim art menyelesaikan 34 file `assets/world/` (3 arena × 5 lapis,
@@ -86,7 +110,7 @@ dengan mock canvas 2D (tanpa live browser).
    logika pilih-simpan sudah benar (terverifikasi jsdom: klik HARD →
    `.sel` pindah & `difficulty:'hard'` diteruskan ke `NWGame.start` →
    HP musuh ×1,2 di game). Diperkuat: `NWAudio.init()` sebelum bunyi klik
-   (feedback audio langsung), `aria-pressed`, tanda `✓` pada tombol aktif
+   (feedback audio langsung), `aria-pressed`, tanda ceklis pada tombol aktif (kini SVG, v10)
    via CSS, dan toast "Kesulitan: HARD" sebagai konfirmasi visual tiap tap.
 
 5. **Layar akhir anti-tertutup overlay** (ui.js, style.css): akar masalah —
