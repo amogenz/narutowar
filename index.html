@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Naruto War by Amogenz Lab</title>
+<link rel="icon" type="image/png" href="assets/icon-32.png?v=1">
+<link rel="apple-touch-icon" href="assets/icon-180.png?v=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=9">
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="960" height="540"></canvas>
+
+  <!-- LOADING -->
+  <div id="screen-loading" class="screen active">
+    <div class="load-box">
+      <img src="assets/logo-naruto-war-web.jpg?v=2" class="main-logo med" alt="NARUTO WAR">
+      <img src="assets/icon-32.png?v=1" class="load-shuriken" alt="">
+      <div class="loadbar"><div id="loadfill"></div></div>
+      <p id="loadtxt">Memuat aset...</p>
+      <p class="prod-by"><img src="assets/icon-lab-v2.jpg?v=3" alt="LAB"> A PRODUCTION BY <b>AMOGENZ LAB</b></p>
+    </div>
+  </div>
+
+  <!-- SPLASH STUDIO -->
+  <div id="screen-splash" class="screen">
+    <div class="splash-box">
+      <img src="assets/icon-lab-v2.jpg?v=3" class="splash-logo" alt="AMOGENZ LAB">
+      <p class="splash-sub">A PRODUCTION BY</p>
+      <h2 class="splash-title">AMOGENZ LAB</h2>
+      <p class="hint">ketuk untuk lanjut</p>
+    </div>
+  </div>
+
+  <!-- LAYAR JUDUL -->
+  <div id="screen-title" class="screen">
+    <div class="lab-badge"><img src="assets/icon-lab-v2.jpg?v=3" alt="LAB"><span>AMOGENZ LAB</span></div>
+    <button id="btn-mute-title" class="iconbtn corner" title="Suara">🔊</button>
+    <div class="title-box">
+      <img src="assets/logo-naruto-war-web.jpg?v=2" class="main-logo" alt="NARUTO WAR">
+      <p class="subtitle">Pertarungan ninja 2D di web — hancurkan tower &amp; base musuh!</p>
+      <button class="btn big" id="btn-start">MULAI BERMAIN</button>
+      <p class="hint">Fan-made game terinspirasi Naruto Senki. Bukan produk resmi.</p>
+    </div>
+    <div class="title-footer">A PRODUCTION BY <b>AMOGENZ LAB</b></div>
+  </div>
+
+  <!-- PILIH MODE -->
+  <div id="screen-mode" class="screen">
+    <div class="panel">
+      <div class="menu-head"><img src="assets/logo-naruto-war-web.jpg?v=2" alt="NARUTO WAR"></div>
+      <h2>PILIH MODE</h2>
+      <div class="mode-grid">
+        <div class="mode-card" data-mode="training"><h3>LATIHAN</h3><p>Lawan boneka kayu.<br>Uji jurusmu.</p></div>
+        <div class="mode-card" data-mode="versus"><h3>VERSUS 1v1</h3><p>Duel + wave minion.<br>Hancurkan base musuh.</p></div>
+        <div class="mode-card" data-mode="war"><h3>WAR 3v3</h3><p>Perang tim 3 lawan 3<br>dengan 2 kawan AI.</p></div>
+        <div class="mode-card" data-mode="survival"><h3>SURVIVAL</h3><p>Bertahan dari 8 gelombang<br>musuh tanpa akhir.</p></div>
+      </div>
+      <div class="diff-row">
+        <span>Kesulitan:</span>
+        <button class="btn ghost sm sel" data-diff="normal">NORMAL</button>
+        <button class="btn ghost sm" data-diff="hard">HARD</button>
+      </div>
+      <div class="row">
+        <button class="btn ghost" id="btn-back-mode">KEMBALI</button>
+        <button class="btn" id="btn-to-char" disabled>LANJUT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PILIH ARENA -->
+  <div id="screen-arena" class="screen">
+    <div class="panel">
+      <div class="menu-head"><img src="assets/logo-naruto-war-web.jpg?v=2" alt="NARUTO WAR"></div>
+      <h2>PILIH ARENA</h2>
+      <div class="steps"><div class="steptrack"><div class="stepfill" style="width:100%"></div></div><p class="stepnum">3/3 • PILIH ARENA</p></div>
+      <div id="arena-grid" class="arena-grid"></div>
+      <div class="row">
+        <button class="btn ghost" id="btn-back-arena">KEMBALI</button>
+        <button class="btn" id="btn-fight" disabled>MULAI BERTARUNG</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PILIH KARAKTER -->
+  <div id="screen-select" class="screen">
+    <div class="panel">
+      <div class="menu-head"><img src="assets/logo-naruto-war-web.jpg?v=2" alt="NARUTO WAR"></div>
+      <h2>PILIH NINJAMU</h2>
+      <div class="steps"><div class="steptrack"><div class="stepfill" style="width:33%"></div></div><p class="stepnum">1/3 • PILIH KARAKTERMU</p></div>
+      <div id="char-grid" class="char-grid"></div>
+      <div class="row">
+        <button class="btn ghost" id="btn-back-select">KEMBALI</button>
+        <button class="btn" id="btn-to-next" disabled>LANJUT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PILIH LAWAN -->
+  <div id="screen-enemy" class="screen">
+    <div class="panel">
+      <div class="menu-head"><img src="assets/logo-naruto-war-web.jpg?v=2" alt="NARUTO WAR"></div>
+      <h2>PILIH LAWANMU</h2>
+      <div class="steps"><div class="steptrack"><div class="stepfill" style="width:66%"></div></div><p class="stepnum">2/3 • LAWAN MISTERIUS — KETUK UNTUK MENGUNGKAP</p></div>
+      <div id="enemy-grid" class="char-grid"></div>
+      <div class="row">
+        <button class="btn ghost" id="btn-back-enemy">KEMBALI</button>
+        <button class="btn" id="btn-to-arena2" disabled>LANJUT: PILIH ARENA</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HUD PERTARUNGAN -->
+  <div id="hud" class="hidden">
+    <div class="hud-top">
+      <div class="hside ally">
+        <img id="hud-pport" class="hport" alt="">
+        <div class="hinfo">
+          <div class="hpname" id="hud-pname"></div>
+          <div class="hptitle" id="hud-ptitle"></div>
+          <div class="bar"><div id="hud-pghost" class="ghost"></div><div id="hud-php" class="fill hp"></div></div>
+          <div class="bar small"><div id="hud-pchakra" class="fill chakra"></div></div>
+        </div>
+      </div>
+      <div class="hud-mid">
+        <div id="hud-pips" class="pips"></div>
+        <div id="hud-timer">0:00</div>
+        <div id="hud-stats"><span id="hud-kills">KILL 0</span> <span id="hud-coins">KOIN 0</span></div>
+      </div>
+      <div class="hside foe">
+        <div class="hinfo right">
+          <div class="hpname" id="hud-ename"></div>
+          <div class="hptitle" id="hud-etitle"></div>
+          <div class="bar"><div id="hud-eghost" class="ghost"></div><div id="hud-ehp" class="fill hp"></div></div>
+        </div>
+        <img id="hud-eport" class="hport" alt="">
+      </div>
+    </div>
+    <div class="hud-btns">
+      <button id="btn-orient" class="iconbtn" title="Kunci landscape">⟳</button>
+      <button id="btn-fs" class="iconbtn" title="Layar penuh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></svg></button>
+      <button id="btn-sound" class="iconbtn" title="Suara">🔊</button>
+      <button id="btn-quit" class="iconbtn" title="Keluar">✕</button>
+    </div>
+    <!-- KONTROL SENTUH: 1 joystick + ATTACK + 3 jutsu + ULTIMATE -->
+    <div id="touch">
+      <div id="stick"><div id="stick-knob"></div></div>
+      <div id="skillbtns">
+        <div class="btnrow">
+          <div class="skcell"><button class="skbtn" data-sk="0" id="sk0" title="Jutsu 1"><span class="cd"></span><span class="cdnum"></span><b>J1</b></button><span class="skname" id="skn0"></span></div>
+          <div class="skcell"><button class="skbtn" data-sk="1" id="sk1" title="Jutsu 2"><span class="cd"></span><span class="cdnum"></span><b>J2</b></button><span class="skname" id="skn1"></span></div>
+          <div class="skcell"><button class="skbtn" data-sk="2" id="sk2" title="Jutsu 3"><span class="cd"></span><span class="cdnum"></span><b>J3</b></button><span class="skname" id="skn2"></span></div>
+          <div class="skcell"><button class="skbtn ult" data-sk="3" id="sk3" title="Ultimate"><span class="cd"></span><span class="cdnum"></span><b>ULT</b></button><span class="skname ult" id="skn3"></span></div>
+        </div>
+        <div class="btnrow">
+          <div class="skcell"><button class="skbtn atk" id="btn-atk" title="Attack"><b>ATK</b></button><span class="skname">Serang</span></div>
+        </div>
+      </div>
+    </div>
+    <div id="keyhelp">Gerak: WASD / Panah &nbsp;•&nbsp; Attack: Spasi &nbsp;•&nbsp; Jutsu: Z X C &nbsp;•&nbsp; Ult: U &nbsp;•&nbsp; Dash: ketuk 2&times; arah / Shift</div>
+  </div>
+
+  <!-- OVERLAY PAKSA LANDSCAPE -->
+  <div id="rotate-overlay" class="hidden">
+    <div class="rotate-box">
+      <div class="rotate-icon"></div>
+      <h2>PUTAR HP KAMU</h2>
+      <p>Game ini wajib dimainkan dalam mode <b>landscape</b> (miring).</p>
+      <button class="btn big" id="btn-force-landscape">PAKSA LANDSCAPE</button>
+      <p class="hint">Jika tombol tidak berfungsi, aktifkan rotasi otomatis di HP lalu miringkan HP.</p>
+    </div>
+  </div>
+
+  <!-- LAYAR AKHIR -->
+  <div id="screen-end" class="screen">
+    <div class="title-box">
+      <h1 id="end-title">MENANG!</h1>
+      <p id="end-sub" class="subtitle"></p>
+      <div class="row">
+        <button class="btn" id="btn-rematch">MAIN LAGI</button>
+        <button class="btn ghost" id="btn-tomenu">MENU UTAMA</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="js/audio.js?v=3"></script>
+<script src="js/data.js?v=7"></script>
+<script src="js/sprite.js?v=2"></script>
+<script src="js/fighter.js?v=2"></script>
+<script src="js/game.js?v=7"></script>
+<script src="js/ui.js?v=9"></script>
+<script src="js/main.js?v=3"></script>
+</body>
+</html>
