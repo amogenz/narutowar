@@ -126,6 +126,7 @@ NWGame.start({ mode: 'training', arena: 'konoha', difficulty: 'normal',
   player: NWChars[0], enemy: NWChars[0] });
 S = NWGame.getState();
 ok('training: dummy ada', !!S.dummy);
+ok('training: dummy langsung terlihat di viewport awal', S.dummy.x < 960);
 ok('training: tanpa tower', S.towers.length === 0);
 
 /* --- survival --- */

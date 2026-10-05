@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=9">
+<link rel="stylesheet" href="css/style.css?v=11">
 </head>
 <body>
 <div id="wrap">
@@ -59,14 +59,14 @@
       <h2>PILIH MODE</h2>
       <div class="mode-grid">
         <div class="mode-card" data-mode="training"><h3>LATIHAN</h3><p>Lawan boneka kayu.<br>Uji jurusmu.</p></div>
-        <div class="mode-card" data-mode="versus"><h3>VERSUS 1v1</h3><p>Duel + wave minion.<br>Hancurkan base musuh.</p></div>
-        <div class="mode-card" data-mode="war"><h3>WAR 3v3</h3><p>Perang tim 3 lawan 3<br>dengan 2 kawan AI.</p></div>
+        <div class="mode-card" data-mode="versus"><h3>VERSUS 1v1</h3><p>1v1 + wave minion.<br>Hancurkan tower &amp; base musuh.</p></div>
+        <div class="mode-card" data-mode="war"><h3>WAR 3v3</h3><p>3v3 + wave minion.<br>Hancurkan tower &amp; base musuh.</p></div>
         <div class="mode-card" data-mode="survival"><h3>SURVIVAL</h3><p>Bertahan dari 8 gelombang<br>musuh tanpa akhir.</p></div>
       </div>
       <div class="diff-row">
         <span>Kesulitan:</span>
-        <button class="btn ghost sm sel" data-diff="normal">NORMAL</button>
-        <button class="btn ghost sm" data-diff="hard">HARD</button>
+        <button type="button" class="btn ghost sm sel" data-diff="normal" aria-pressed="true">NORMAL</button>
+        <button type="button" class="btn ghost sm" data-diff="hard" aria-pressed="false">HARD</button>
       </div>
       <div class="row">
         <button class="btn ghost" id="btn-back-mode">KEMBALI</button>
@@ -194,8 +194,8 @@
 <script src="js/data.js?v=7"></script>
 <script src="js/sprite.js?v=2"></script>
 <script src="js/fighter.js?v=2"></script>
-<script src="js/game.js?v=7"></script>
-<script src="js/ui.js?v=9"></script>
+<script src="js/game.js?v=9"></script>
+<script src="js/ui.js?v=11"></script>
 <script src="js/main.js?v=3"></script>
 </body>
 </html>
