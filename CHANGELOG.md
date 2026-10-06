@@ -2,6 +2,16 @@
 
 Riwayat perubahan game per milestone. Format: tanggal — ringkasan.
 
+## 2026-10-06 — v16b: FIX QA (flash 404, preview karakter, nama terpotong)
+
+**Temuan QA & perbaikan:**
+1. Flash "404 Halaman tidak ditemukan" sepersekian detik saat MULAI BERTARUNG: `vercel.json` ditambah SPA fallback rewrite — semua path yang tidak ada kini dilayani `index.html` (bukan halaman 404 Vercel), transisi langsung ke gameplay.
+2. Preview PILIH NINJAMU menampilkan ikon gambar rusak + nama "—" sebelum ada pilihan: saat masuk layar, preview otomatis diisi art + nama karakter pertama yang terbuka (selectPlayer), kartu ikut tertandai & tombol LANJUT aktif — rapi sejak awal.
+3. Nama "NARUTO UZUMA…" terpotong ellipsis di bilah nama splash: CSS `.splash-nametxt h3` diubah — hapus `white-space:nowrap`/ellipsis, font disesuaikan, nama boleh wrap sehingga tampil penuh.
+4. Pengaman tambahan: semua `<button>` di index.html diberi `type="button"` eksplisit (anti submit/navigasi tak sengaja).
+
+**File:** index.html, vercel.json, css/style.css (v18), js/ui.js (v19), version.json (v20).
+
 ## 2026-10-06 — v16: STAGE SELECT + MUSIK ORIGINAL
 
 **STAGE SELECT ala referensi (index.html, css/style.css v17, js/ui.js v18):**
