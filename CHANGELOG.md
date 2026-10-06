@@ -2,6 +2,14 @@
 
 Riwayat perubahan game per milestone. Format: tanggal — ringkasan.
 
+## 2026-10-06 — v17c: NPC HILANG DARI MODE LATIHAN
+
+**Temuan QA visual:** di mode SOLO Latihan (arena Gerbang Konoha), 2 NPC penduduk masih berdiri di dekat area pemain/boneka latihan (x 790/880 — tepat di samping boneka di x 640). Posisi NPC v17 dirancang untuk celah antar-tower, tapi mode Latihan tidak punya tower/base sehingga NPC malah muncul di zona pertarungan dan mengganggu.
+
+**Perbaikan (js/game.js v17):** blok gambar NPC dekoratif kini dilewati total saat `G.mode==='training'` — arena latihan hanya berisi pemain + boneka kayu, bersih dari gangguan. Mode versus/war/survival tidak berubah (NPC tetap di celah antar-tower, jauh dari label BASE/TOWER).
+
+**File:** js/game.js (v17), index.html, version.json (v23).
+
 ## 2026-10-06 — v17b: MUSIK DARI BOS (menu.mp3 + battle.mp3)
 
 **Musik file Bos (assets/music/):**
