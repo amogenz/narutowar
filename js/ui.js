@@ -488,9 +488,11 @@ function setPaused(v){
 }
 function restartBattle(){
   /* MULAI ULANG: tutup pause, jalankan ulang match dengan konfigurasi sama.
-     Pip ronde sesi (rwP/rwE) TIDAK direset — itu skor sesi, bukan match. */
+     Pip ronde sesi (rwP/rwE) TIDAK direset — itu skor sesi, bukan match.
+     v17: roster war di-pick ulang (seperti dulu) + sprite dipastikan dulu. */
   setPaused(false);
-  launchBattle();
+  lastRoster=null;
+  ensureBattleSprites().then(()=>{launchBattle();});
 }
 function quitToMenu(){
   setPaused(false);
@@ -554,6 +556,46 @@ function setupPauseToggles(){
   onTap($('btn-sfx'),()=>{
     NWAudio.setSfx(!NWAudio.enabled);
     uiClick();paintPauseToggles();
+    toast('Suara: '+(NWAudio.enabled?'ON':'OFF'));
+  });
+}
+
+/* ---------- PANEL PENGATURAN (layar judul, v17) ----------
+ * Toggle MUSIK & SUARA memakai logika NWAudio yang sama seperti menu jeda
+ * (NWAudio.setBgm/setSfx; preferensi tersimpan 'nw_bgm'/'nw_sfx'),
+ * ditambah info AMOGENZ & AMOGENZ LAB. Anti-emoji, Bahasa Indonesia. */
+function paintSettingsToggles(){
+  const setB=(el,on)=>{if(!el)return;el.classList.toggle('off',!on);
+    const b=el.querySelector('b');if(b)b.textContent=on?'ON':'OFF';};
+  setB($('btn-set-bgm'),NWAudio.bgm!==false);
+  setB($('btn-set-sfx'),!!NWAudio.enabled);
+}
+function openSettings(){
+  uiClick();
+  try{NWAudio.restorePrefs();}catch(e){}
+  paintSettingsToggles();
+  const ov=$('settings-overlay');if(ov)ov.classList.add('show');
+}
+function closeSettings(){
+  uiClick();
+  const ov=$('settings-overlay');if(ov)ov.classList.remove('show');
+}
+function setupSettings(){
+  /* guard: elemen HTML ditambahkan belakangan (koordinator) — jangan crash */
+  const bs=$('btn-settings');if(bs)onTap(bs,openSettings);
+  const bc=$('btn-settings-close');if(bc)onTap(bc,closeSettings);
+  const ov=$('settings-overlay');
+  if(ov)onTap(ov,e=>{if(e&&e.target===ov)closeSettings();}); /* tap latar = tutup */
+  const bgm=$('btn-set-bgm');
+  if(bgm)onTap(bgm,()=>{
+    NWAudio.setBgm(!(NWAudio.bgm!==false));
+    uiClick();paintSettingsToggles();
+    toast('Musik: '+(NWAudio.bgm!==false?'ON':'OFF'));
+  });
+  const sfx=$('btn-set-sfx');
+  if(sfx)onTap(sfx,()=>{
+    NWAudio.setSfx(!NWAudio.enabled);
+    uiClick();paintSettingsToggles();
     toast('Suara: '+(NWAudio.enabled?'ON':'OFF'));
   });
 }
@@ -694,22 +736,30 @@ function boot(){
     im.src=src;
     setTimeout(once,5000); // jangan macet bila gagal
   });
-  /* sprite sheet karakter + FX (gagal = fallback prosedural, game tetap jalan) */
+  /* v17: strip karakter TIDAK di-preload saat boot (hemat ~40MB RAM &
+   * puluhan request di HP) — hanya FX yang selalu dipakai semua mode.
+   * Strip karakter dimuat on-demand di ensureBattleSprites() sebelum battle. */
   const loadSprites=()=>{
     if(!window.NWSprite){step();return;}
-    const jobs=NWChars.filter(c=>c.sprite).map(c=>NWSprite.load(c.id,c.sprite));
-    jobs.push(NWSprite.loadFx(window.NWFxSheet||'assets/sprites/fx'));
-    Promise.all(jobs).then(()=>{step();}).catch(()=>{step();});
+    NWSprite.loadFx(window.NWFxSheet||'assets/sprites/fx')
+      .then(()=>{step();}).catch(()=>{step();});
     setTimeout(step,6000); // pengaman: jangan macet
   };
   loadSprites();
 }
-let splashTimer=null;
+/* ---------- SPLASH "ketuk untuk lanjut" (v17): TANPA auto-advance ----------
+ * Layar TIDAK berpindah sendiri — benar-benar menunggu ketukan user di mana
+ * saja pada layar splash. Ketukan pertama ini juga menjadi gestur kunci
+ * AudioContext, sehingga BGM menu diizinkan browser untuk diputar
+ * (kebijakan autoplay). */
 function showSplash(){
   show('screen-splash');
-  const go=()=>{clearTimeout(splashTimer);show('screen-title');};
-  splashTimer=setTimeout(go,2200);
-  $('screen-splash').onclick=go;
+  const go=e=>{
+    /* tombol layar-penuh di splash tak ikut memicu lanjut ke judul */
+    if(e&&e.target&&e.target.closest&&e.target.closest('[data-fs]'))return;
+    NWAudio.init();uiClick();show('screen-title');
+  };
+  onTap($('screen-splash'),go);
 }
 
 /* ---------- alur ---------- */
@@ -777,6 +827,7 @@ function bindUI(){
   onTap($('btn-enemy-prev'),()=>cycleSel(true,-1));
   onTap($('btn-enemy-next'),()=>cycleSel(true,1));
   setupPauseToggles();
+  setupSettings(); /* v17: panel PENGATURAN di layar judul */
   /* pause dalam game (tombol HUD + keyboard Esc/P) */
   onTap($('btn-pause'),()=>{uiClick();setPaused(true);});
   onTap($('btn-resume'),()=>{setPaused(false);uiClick();});
@@ -807,6 +858,29 @@ function insertCoinBar(screenId){
   const d=document.createElement('div');d.className='coinbar';d.innerHTML=ICON.coin+'KOIN: 0';
   panel.insertBefore(d,panel.firstChild);
 }
+/* v17: muat strip sprite HANYA untuk karakter yang dipakai battle ini
+ * (hemat RAM & request di HP). Idempotent: NWSprite.load dedup via pending. */
+let lastRoster=null;
+function battleChars(){
+  const list=[pChar];
+  if(mode==='versus'){if(eChar&&eChar!==pChar)list.push(eChar);}
+  else if(mode==='war'&&window.NWGame&&NWGame.pickWarRoster){
+    lastRoster=NWGame.pickWarRoster(pChar.id);
+    for(const c of lastRoster)if(c&&!list.includes(c))list.push(c);
+  }
+  return list.filter(Boolean);
+}
+function ensureBattleSprites(){
+  try{
+    if(!window.NWSprite)return Promise.resolve(false);
+    const jobs=battleChars()
+      .filter(c=>c.sprite&&!NWSprite.has(c.id))
+      .map(c=>NWSprite.load(c.id,c.sprite));
+    if(!jobs.length)return Promise.resolve(true);
+    const timeout=new Promise(res=>setTimeout(()=>res(false),8000)); // jangan macet
+    return Promise.race([Promise.all(jobs).then(()=>true).catch(()=>false),timeout]);
+  }catch(e){return Promise.resolve(false);}
+}
 /* inti mulai battle — dipakai startBattle (dari menu) & restartBattle (dari pause) */
 function launchBattle(){
   show(null);
@@ -816,7 +890,7 @@ function launchBattle(){
   setSkillLabels(pChar);
   NWGame.setInput(0,0);
   setPaused(false);
-  NWGame.start({mode,arena,difficulty,player:pChar,enemy:eChar||pChar});
+  NWGame.start({mode,arena,difficulty,player:pChar,enemy:eChar||pChar,roster:lastRoster});
   setupBattleHUD();
 }
 function startBattle(){
@@ -824,11 +898,14 @@ function startBattle(){
   battleStarting=true;
   const fb=$('btn-fight');
   const oldTxt=fb.innerHTML;fb.disabled=true;fb.innerHTML='MEMUAT ARENA...';
-  /* beri browser satu frame untuk menggambar feedback sebelum kerja berat */
+  /* beri browser satu frame untuk menggambar feedback sebelum kerja berat,
+   * lalu pastikan sprite karakter battle ini sudah dimuat (v17) */
   setTimeout(()=>{
-    launchBattle();
-    fb.disabled=false;fb.innerHTML=oldTxt;
-    battleStarting=false;
+    ensureBattleSprites().then(()=>{
+      launchBattle();
+      fb.disabled=false;fb.innerHTML=oldTxt;
+      battleStarting=false;
+    });
   },60);
 }
 /* isi HUD premium: portrait + nama + julukan kedua sisi, reset lapis HP & pip */
