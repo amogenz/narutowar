@@ -25,7 +25,7 @@ const G={
   time:0,last:0,acc:0,cam:0,shake:0,dpr:1,hitstop:0,koCd:0,
   fighters:[],player:null,minions:[],towers:[],bases:[],
   projs:[],parts:[],zones:[],texts:[],delayed:[],flashes:[],
-  partPool:[],projPool:[],
+  partPool:[],projPool:[],txtPool:[],flashPool:[],
   waveT:0,survT:0,survWave:0,input:{x:0,y:0},
   kills:[0,0],coins:0,banner:null,bannerT:0,
   /* F. scoreboard per petarung per match (dibaca UI lead via NWGame.scoreboard()) */
@@ -64,8 +64,23 @@ const _ents=[];
 function byY(a,b){return a.y-b.y;}
 /* gradien vignette di-cache per lebar viewport (bukan dibuat per frame) */
 let _vigGrad=null,_vigVw=0;
+/* DPR adaptif (v17): HP (pointer kasar) dibatasi 1.5, desktop tetap 2.
+ * Fill-rate adalah bottleneck utama HP mid-range: 1.5 vs 2 = ~44% piksel
+ * lebih sedikit per frame. Laptop touchscreen (pointer fine) tetap desktop. */
+function detectMobileGPU(){
+  try{
+    if(typeof window==='undefined')return false;
+    if(window.matchMedia){
+      if(window.matchMedia('(pointer: coarse)').matches)return true;
+      return false;
+    }
+    return ('ontouchstart' in window)||(navigator.maxTouchPoints>0);
+  }catch(e){return false;}
+}
+let DPR_CAP=detectMobileGPU()?1.5:2;
+const IS_MOBILE_GPU=DPR_CAP<2;
 function resize(){
-  var dpr=Math.min(window.devicePixelRatio||1,2);
+  var dpr=Math.min(window.devicePixelRatio||1,DPR_CAP);
   var cw=Math.max(2,Math.round(window.innerWidth*dpr));
   var ch=Math.max(2,Math.round(window.innerHeight*dpr));
   if(G.canvas.width!==cw||G.canvas.height!==ch){G.canvas.width=cw;G.canvas.height=ch;}
@@ -83,6 +98,11 @@ function pnew(){const p=G.partPool.pop();return p||{};}
 function pfree(p){if(G.partPool.length<260)G.partPool.push(p);}
 function jnew(){const p=G.projPool.pop();return p||{};}
 function jfree(p){if(G.projPool.length<90)G.projPool.push(p);}
+/* v17: pool teks damage & kilatan FX (sebelumnya objek baru tiap hit -> GC) */
+function tnew(){const p=G.txtPool.pop();return p||{};}
+function tfree(p){if(G.txtPool.length<64)G.txtPool.push(p);}
+function fnew(){const p=G.flashPool.pop();return p||{};}
+function ffree(p){if(G.flashPool.length<32)G.flashPool.push(p);}
 
 /* ---------- background berlapis (parallax) ---------- */
 function mkCanvas(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
@@ -490,8 +510,10 @@ function puff(x,y,color,n,spd,life,size){
   }
 }
 function ftext(x,y,str,color,size){
-  if(G.texts.length>=MAX_TXT)G.texts.shift();
-  G.texts.push({x,y,str,color:color||'#fff',size:size||15,life:1});
+  if(G.texts.length>=MAX_TXT)tfree(G.texts.shift());
+  const t=tnew();
+  t.x=x;t.y=y;t.str=str;t.color=color||'#fff';t.size=size||15;t.life=1;
+  G.texts.push(t);
 }
 function after(t,fn){G.delayed.push({t:G.time+t,fn});}
 /* Banner pengumuman: timing WALL-CLOCK (performance.now), bukan fixed-step.
@@ -609,8 +631,10 @@ function fireProj(o){
 }
 /* kilatan FX jutsu (ledakan dsb.) — digambar via sprite FX bila ada */
 function addFlash(x,y,fx,size,dur){
-  if(G.flashes.length>24)G.flashes.shift();
-  G.flashes.push({x,y,fx:fx||'explosion',size:size||120,t:0,dur:dur||0.6});
+  if(G.flashes.length>24)ffree(G.flashes.shift());
+  const f=fnew();
+  f.x=x;f.y=y;f.fx=fx||'explosion';f.size=size||120;f.t=0;f.dur=dur||0.6;
+  G.flashes.push(f);
 }
 function setPose(h,pose){h.pose=pose;h.pt=0;}
 function castSkill(h,idx){
@@ -859,9 +883,9 @@ function updateFx(dt){
     q.x+=q.vx*k;q.y+=q.vy*k;q.vy+=(q.grav||2.5)*dt;q.life-=dt;
     if(q.life<=0){G.parts.splice(i,1);pfree(q);}}
   for(let i=G.texts.length-1;i>=0;i--){const t=G.texts[i];
-    t.y-=30*dt;t.life-=dt*0.9;if(t.life<=0)G.texts.splice(i,1);}
+    t.y-=30*dt;t.life-=dt*0.9;if(t.life<=0)tfree(G.texts.splice(i,1)[0]);}
   for(let i=G.flashes.length-1;i>=0;i--){const f=G.flashes[i];
-    f.t+=dt;if(f.t>=f.dur)G.flashes.splice(i,1);}
+    f.t+=dt;if(f.t>=f.dur)ffree(G.flashes.splice(i,1)[0]);}
   if(G.shake>0)G.shake=Math.max(0,G.shake-30*dt);
 }
 function update(dt){
@@ -1277,35 +1301,36 @@ function render(){
   g.drawImage(L.mid,-Math.round(G.cam*0.55),0);
   g.save();g.translate(-cam,Math.round(-sy));
   g.drawImage(L.gnd,0,0);
-  /* v15: NPC anime di tepi base (kaki di y=180, di atas lane) — sprite +
-   * animasi idle 4 frame, tanpa alokasi per frame.
-   * Strip baru (assets/npc/): villager 480x160 (4x120), guard 384x192 (4x96).
-   * Fallback strip lama bila art baru gagal dimuat. */
+  /* v17: NPC anime di celah antar-tower TENGAH peta (jauh dari base/tower/label,
+   * kaki tetap y=180 di atas lane) — sprite + animasi idle 4 frame, tanpa alokasi.
+   * Warga di celah tower ally (520/1020); anak & penjaga di celah tower musuh
+   * (1380/1880). Strip baru (assets/world/npc/): villager 480x160 (4x120),
+   * guard 384x192 (4x96). Fallback strip lama bila art baru gagal dimuat. */
   const _npc=G.world.npc;
   if(_npc){
     const tf=Math.floor(G.time*2.2)%4;
     const nv=_npc.npc_villager;
     if(nv&&nv.width){
       if(nv.width>=400){ /* strip baru: 4 frame 120x160 */
-        g.drawImage(nv,tf*120,0,120,160,110-60,180-160,120,160);   // warga 1
-        g.drawImage(nv,((tf+2)%4)*120,0,120,160,190-60,180-160,120,160); // warga 2
+        g.drawImage(nv,tf*120,0,120,160,790-60,180-160,120,160);   // warga 1
+        g.drawImage(nv,((tf+2)%4)*120,0,120,160,880-60,180-160,120,160); // warga 2
       }else{ /* strip lama 192x208: pria 64x96 (y 0..96), wanita 64x104 (y 104..208, headroom 8px) */
         const f3=tf%3;
-        g.drawImage(nv,f3*64,0,64,96,110-32,180-96,64,96);        // warga pria
-        g.drawImage(nv,f3*64,104,64,104,190-32,180-104,64,104);   // warga wanita
+        g.drawImage(nv,f3*64,0,64,96,790-32,180-96,64,96);        // warga pria
+        g.drawImage(nv,f3*64,104,64,104,880-32,180-104,64,104);   // warga wanita
       }
     }
     const ng=_npc.npc_guard;
     if(ng&&ng.width){
       if(ng.width>=300) /* strip baru: 4 frame 96x192 */
-        g.drawImage(ng,tf*96,0,96,192,2290-48,180-192,96,192);    // penjaga
+        g.drawImage(ng,tf*96,0,96,192,1730-48,180-192,96,192);    // penjaga
       else{ /* strip lama 256x96: 4 frame 64x96 */
         const gt=Math.floor(G.time*1.5)%6, gf=gt<4?(gt&1):gt-2;
-        g.drawImage(ng,gf*64,0,64,96,2290-32,180-96,64,96);
+        g.drawImage(ng,gf*64,0,64,96,1730-32,180-96,64,96);
       }
     }
     const nk=_npc.npc_kid;
-    if(nk&&nk.width)g.drawImage(nk,(tf%3)*64,0,64,96,2200-32,180-96,64,96); // anak
+    if(nk&&nk.width)g.drawImage(nk,(tf%3)*64,0,64,96,1620-32,180-96,64,96); // anak
   }
   // zona chakra tengah
   const czx=WORLD_W/2,czy=(LANE_TOP+LANE_BOT)/2;
@@ -1542,7 +1567,11 @@ function perfSample(dt){
   P.ema+=(ms-P.ema)*0.06;
   if(P.ema>20){
     P.good=0;
-    if(++P.bad>45&&P.level<2){P.level++;P.bad=0;}
+    if(++P.bad>45&&P.level<2){P.level++;P.bad=0;
+      /* v17: level minimal di HP -> turunkan DPR ke 1 (kanvas dialokasi ulang
+       * SEKALI per battle; dipulihkan ke 1.5 saat battle baru via start()). */
+      if(P.level>=2&&IS_MOBILE_GPU&&DPR_CAP>1){DPR_CAP=1;resize();}
+    }
   }else{
     P.bad=0;
     if(P.ema<14.5){if(++P.good>300&&P.level>0){P.level--;P.good=0;}}
@@ -1577,7 +1606,7 @@ function loop(ts){
       q.x+=q.vx*k;q.y+=q.vy*k;q.vy+=(q.grav||2.5)*dt;q.life-=dt;
       if(q.life<=0){G.parts.splice(i,1);pfree(q);}}
     for(let i=G.flashes.length-1;i>=0;i--){const f=G.flashes[i];
-      f.t+=dt;if(f.t>=f.dur)G.flashes.splice(i,1);}
+      f.t+=dt;if(f.t>=f.dur)ffree(G.flashes.splice(i,1)[0]);}
     if(G.shake>0)G.shake=Math.max(0,G.shake-30*dt);
     /* bannerT wall-clock: tak dikuras di sini */
   }
@@ -1586,6 +1615,17 @@ function loop(ts){
 }
 
 /* ---------- mulai / selesai ---------- */
+/* v17: roster war di-pick di sini (bukan inline di start) agar UI bisa
+ * preload strip sprite tepat sebelum battle — hemat RAM & request di HP. */
+function pickWarRoster(playerId){
+  const chars=window.NWChars||[];
+  const pool=chars.filter(c=>c.id!==playerId);
+  const pick=()=>pool[Math.floor(Math.random()*pool.length)];
+  const r=[];
+  for(let i=0;i<2;i++)r.push(pick());
+  for(let i=0;i<3;i++)r.push(pick());
+  return r;
+}
 function start(cfg){
   G.arena=cfg.arena||'konoha';G.mode=cfg.mode||'versus';G.difficulty=cfg.difficulty||'normal';
   buildLayers();
@@ -1601,11 +1641,10 @@ function start(cfg){
   if(G.mode==='training'){
     G.dummy=makeDummy();G.towers=[];G.bases=[];
   }else if(G.mode==='war'){
-    const chars=window.NWChars;
-    const pool=chars.filter(c=>c.id!==cfg.player.id);
-    const pick=()=>pool[Math.floor(Math.random()*pool.length)];
-    for(let i=0;i<2;i++)G.fighters.push(makeHero(pick(),0,false));
-    for(let i=0;i<3;i++)G.fighters.push(makeHero(pick(),1,false));
+    /* v17: roster dari cfg (di-pick UI untuk preload sprite) atau pick sendiri */
+    const roster=(cfg.roster&&cfg.roster.length>=5)?cfg.roster:pickWarRoster(cfg.player.id);
+    for(let i=0;i<2;i++)G.fighters.push(makeHero(roster[i],0,false));
+    for(let i=0;i<3;i++)G.fighters.push(makeHero(roster[2+i],1,false));
   }else{
     G.fighters.push(makeHero(cfg.enemy,1,false));
   }
@@ -1613,6 +1652,7 @@ function start(cfg){
   G.time=0;G.waveT=2;G.over=false;G.winner=false;G.acc=0;G.shake=0;
   G.hitstop=0;G.koCd=0;
   G.perf={ema:16.7,level:0,bad:0,good:0}; // reset degradasi adaptif tiap battle
+  DPR_CAP=IS_MOBILE_GPU?1.5:2;resize(); // v17: pulihkan DPR adaptif tiap battle
   G.cam=0;G.kills=[0,0];G.coins=0;G.banner=null;G.bannerT=0;
   G.score=[]; // F. scoreboard match baru: diisi scoreFor() saat kill/death terjadi
   G.paused=false;G.running=true;G.last=performance.now();
@@ -1638,7 +1678,7 @@ function endGame(win){
 
 /* ---------- API ---------- */
 window.NWGame={
-  start,playerCast(i){return castSkill(G.player,i);},
+  start,pickWarRoster,playerCast(i){return castSkill(G.player,i);},
   playerDash(dx,dy){return doDash(G.player,dx,dy);},
   playerAttack(){return playerAttack();},
   setInput(x,y){G.input.x=x;G.input.y=y;},
