@@ -1306,8 +1306,12 @@ function render(){
    * Warga di celah tower ally (520/1020); anak & penjaga di celah tower musuh
    * (1380/1880). Strip baru (assets/world/npc/): villager 480x160 (4x120),
    * guard 384x192 (4x96). Fallback strip lama bila art baru gagal dimuat. */
+  /* v17b: mode LATIHAN tidak menggambar NPC dekoratif sama sekali — arena
+   * latihan hanya berisi pemain + boneka; NPC di x 790/880 dulu muncul tepat
+   * di samping boneka latihan dan mengganggu pandangan (temuan QA visual).
+   * Mode lain tetap memakai posisi v17 (celah antar-tower, jauh dari label). */
   const _npc=G.world.npc;
-  if(_npc){
+  if(_npc&&G.mode!=='training'){
     const tf=Math.floor(G.time*2.2)%4;
     const nv=_npc.npc_villager;
     if(nv&&nv.width){
