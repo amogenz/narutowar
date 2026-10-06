@@ -2,6 +2,17 @@
 
 Riwayat perubahan game per milestone. Format: tanggal — ringkasan.
 
+## 2026-10-06 — v17b: MUSIK DARI BOS (menu.mp3 + battle.mp3)
+
+**Musik file Bos (assets/music/):**
+1. Bos mengirim 2 file MP3 manual (`ReelAudio-8690_10_9c8n.mp3` → `battle.mp3`, `ReelAudio-67716_11_wm18.mp3` → `menu.mp3`); `victory.mp3` belum ada → tetap jingle synth.
+2. Kedua file 25,4 detik; analisis loudness nyaris identik (-14,5 vs -14,6 LUFS) — kemungkinan potongan dari track yang sama; penempatan sesuai instruksi, mudah ditukar bila Bos minta.
+3. Kompres 406KB (128kbps) → 76KB (mono 24kbps, 22,05kHz) agar lolos batas upload deploy ~96KB/file; backup asli di `assets/music/_src/` (tidak di-deploy).
+4. `?v=` musik di js/audio.js: `v=1` → `v=2`; `audio.js?v=4` → `v=5`.
+5. MP3 biner TIDAK di-push ke GitHub (raw-text only) — live di produksi + backup lokal; dokumentasi di ASSETS.md.
+
+**File:** js/audio.js (v5), index.html, assets/music/menu.mp3, assets/music/battle.mp3, ASSETS.md, version.json (v22).
+
 ## 2026-10-06 — v17: KONTROL SENTUH RAPI + SPLASH JUJUR + PENGATURAN + NPC + PERFORMA
 
 **1. Kontrol sentuh dirapikan (css/style.css v19, index.html):**
