@@ -83,13 +83,26 @@ ketuk kartunya untuk lihat butuh berapa koin.
   bertarung, jingle heroik saat menang. Semua komposisi **original**
   (bukan OST Naruto) — dibuat langsung di HP/browser via WebAudio.
 - **SUARA** — efek: pukulan, jutsu, ledakan, klik tombol.
-- Atur di **menu JEDA** (tombol pause saat bertarung): `MUSIK: ON/OFF`
-  dan `SUARA: ON/OFF`. Pilihan tersimpan otomatis.
+- Atur di layar **judul** (tombol **PENGATURAN**) atau **menu JEDA**
+  (tombol pause saat bertarung): `MUSIK: ON/OFF` dan `SUARA: ON/OFF`.
+  Pilihan tersimpan otomatis di HP/browser.
 - Musik berhenti saat game di-pause, lanjut lagi saat resume.
-- (Opsional, untuk yang punya file legal) taruh `menu.mp3` /
-  `battle.mp3` / `victory.mp3` di `assets/music/` — game otomatis
-  memakai file itu; bila tidak ada, synth bawaan yang dipakai.
-  **Jangan pakai OST berhak cipta.**
+- Musik menu mulai diputar setelah ketukan pertama (ketuk layar splash)
+  — aturan autoplay browser.
+
+### Musik file sendiri (opsional, untuk yang punya file legal)
+
+Taruh `menu.mp3` / `battle.mp3` / `victory.mp3` di `assets/music/` —
+game otomatis memakai file itu; bila tidak ada, synth bawaan yang
+dipakai. Cara kerjanya: setiap jenis musik dicek dulu lewat permintaan
+`HEAD` ke `assets/music/<jenis>.mp3`; kalau server menjawab **200**
+(file ada) → file MP3 diputar looping; kalau **404** (tak ada) →
+komposisi synth bawaan yang dipakai. Hasil cek disimpan selama sesi
+berjalan.
+
+**Jangan pakai OST berhak cipta, dan jangan ambil audio dari Instagram**
+— hanya pakai file yang kamu punya haknya (buatan sendiri / bebas
+lisensi).
 
 ## Stage
 

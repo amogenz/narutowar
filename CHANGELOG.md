@@ -2,6 +2,29 @@
 
 Riwayat perubahan game per milestone. Format: tanggal — ringkasan.
 
+## 2026-10-06 — v17: KONTROL SENTUH RAPI + SPLASH JUJUR + PENGATURAN + NPC + PERFORMA
+
+**1. Kontrol sentuh dirapikan (css/style.css v19, index.html):**
+1. Dock kanan bawah ala Naruto Senki: grid jutsu 2×2 (J1 J2 / J3 ULT) + tombol ATTACK ikon tinju SVG BESAR di pojok — tidak menumpuk, tidak menutupi tengah arena.
+2. Ukuran via `clamp(px, vmin, px)` — identik di portrait 360px & landscape (vmin sama di 360×640 dan 740×360); masalah tombol kecil/rapat di landscape hilang.
+3. `#touch` kini `pointer-events:none` (anak tetap auto) — overlay tak lagi menelan tap tak sengaja.
+
+**2. Splash jujur + fullscreen + PENGATURAN (js/ui.js v21, index.html):**
+1. Splash "ketuk untuk lanjut" BENAR-BENAR menunggu ketukan — auto-advance 2,2 dtk dihapus. Ketukan pertama sekaligus membuka kunci AudioContext (BGM menu diizinkan browser).
+2. Tombol fullscreen (ikon SVG) kini ada di splash, layar judul, HUD, dan menu jeda.
+3. Menu PENGATURAN baru di layar judul: toggle MUSIK, toggle SUARA, INFO AMOGENZ, INFO AMOGENZ LAB (Bahasa Indonesia, anti-emoji).
+
+**3. NPC dipindah (js/game.js v16):** warga/guad/anak pindah dari area base ke celah antar tower (x 790/880 & 1620/1730, kaki y=180) — jauh dari base, tower, jalur minion, dan label. Animasi idle tetap.
+
+**4. Performa HP (js/game.js v16, js/ui.js v21):**
+1. Strip sprite karakter TIDAK di-preload saat boot — hanya FX; strip dimuat on-demand sebelum battle sesuai roster (hemat ~40MB RAM & puluhan request di HP). Roster war di-pick via `NWGame.pickWarRoster()` agar preload tepat.
+2. DPR adaptif: HP (pointer coarse) max 1.5, desktop 2; eskalasi darurat ke 1 bila perf level 2.
+3. Pool teks damage (cap 64) + pool kilatan FX (cap 32) — tanpa alokasi per frame.
+
+**5. Musik:** override `assets/music/*.mp3` terverifikasi berfungsi (HEAD → 200 pakai MP3, 404 pakai synth) + dokumentasi di CARA-BERMAIN.md. Tidak mengambil audio dari Instagram (hak cipta).
+
+**File:** index.html, css/style.css (v19), js/ui.js (v21), js/game.js (v16), CARA-BERMAIN.md, version.json (v21).
+
 ## 2026-10-06 — v16b: FIX QA (flash 404, preview karakter, nama terpotong)
 
 **Temuan QA & perbaikan:**
