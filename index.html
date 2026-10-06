@@ -35,7 +35,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=17">
+<link rel="stylesheet" href="css/style.css?v=18">
 </head>
 <body>
 <div id="wrap">
@@ -66,13 +66,13 @@
   <div id="screen-title" class="screen">
     <div class="lab-badge"><img src="assets/icon-lab-v2.jpg?v=3" alt="LAB"><span>AMOGENZ LAB</span></div>
     <div class="corners corners-right">
-      <button id="btn-mute-title" class="iconbtn" data-sound title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
-      <button id="btn-orient-title" class="iconbtn" data-orient title="Kunci orientasi" aria-label="Kunci orientasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
+      <button type="button" id="btn-mute-title" class="iconbtn" data-sound title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
+      <button type="button" id="btn-orient-title" class="iconbtn" data-orient title="Kunci orientasi" aria-label="Kunci orientasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
     </div>
     <div class="title-box">
       <img src="assets/logo-naruto-war-web.jpg?v=2" class="main-logo" alt="NARUTO WAR">
       <p class="subtitle">Pertarungan ninja 2D di web — hancurkan tower &amp; base musuh!</p>
-      <button class="btn big" id="btn-start">MULAI BERMAIN</button>
+      <button type="button" class="btn big" id="btn-start">MULAI BERMAIN</button>
       <p class="hint">Fan-made game terinspirasi Naruto Senki. Bukan produk resmi.</p>
     </div>
     <div class="title-footer">A PRODUCTION BY <b>AMOGENZ LAB</b></div>
@@ -81,11 +81,11 @@
   <!-- PILIH MODE -->
   <div id="screen-mode" class="screen">
     <div class="corners corners-left">
-      <button class="iconbtn" id="btn-back-mode" data-back title="Kembali" aria-label="Kembali"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button>
+      <button type="button" class="iconbtn" id="btn-back-mode" data-back title="Kembali" aria-label="Kembali"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button>
     </div>
     <div class="corners corners-right">
-      <button class="iconbtn" data-sound title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
-      <button class="iconbtn" data-orient title="Kunci orientasi" aria-label="Kunci orientasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
+      <button type="button" class="iconbtn" data-sound title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
+      <button type="button" class="iconbtn" data-orient title="Kunci orientasi" aria-label="Kunci orientasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
     </div>
     <div class="panel">
       <div class="menu-head"><img src="assets/logo-naruto-war-web.jpg?v=2" alt="NARUTO WAR"></div>
@@ -102,7 +102,7 @@
         <button type="button" class="btn ghost sm" data-diff="hard" aria-pressed="false">HARD</button>
       </div>
       <div class="row">
-        <button class="btn" id="btn-to-char" disabled>LANJUT</button>
+        <button type="button" class="btn" id="btn-to-char" disabled>LANJUT</button>
       </div>
     </div>
   </div>
@@ -110,11 +110,11 @@
   <!-- PILIH ARENA -->
   <div id="screen-arena" class="screen">
     <div class="corners corners-left">
-      <button class="iconbtn" id="btn-back-arena" data-back title="Kembali" aria-label="Kembali"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button>
+      <button type="button" class="iconbtn" id="btn-back-arena" data-back title="Kembali" aria-label="Kembali"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button>
     </div>
     <div class="corners corners-right">
-      <button class="iconbtn" data-sound title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
-      <button class="iconbtn" data-orient title="Kunci orientasi" aria-label="Kunci orientasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
+      <button type="button" class="iconbtn" data-sound title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
+      <button type="button" class="iconbtn" data-orient title="Kunci orientasi" aria-label="Kunci orientasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
     </div>
     <div class="panel panel-arena">
       <div class="menu-head"><img src="assets/logo-naruto-war-web.jpg?v=2" alt="NARUTO WAR"></div>
@@ -131,7 +131,7 @@
         </div>
       </div>
       <div class="row">
-        <button class="btn" id="btn-fight">MULAI BERTARUNG</button>
+        <button type="button" class="btn" id="btn-fight">MULAI BERTARUNG</button>
       </div>
     </div>
   </div>
@@ -139,11 +139,11 @@
   <!-- PILIH KARAKTER -->
   <div id="screen-select" class="screen">
     <div class="corners corners-left">
-      <button class="iconbtn" id="btn-back-select" data-back title="Kembali" aria-label="Kembali"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button>
+      <button type="button" class="iconbtn" id="btn-back-select" data-back title="Kembali" aria-label="Kembali"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button>
     </div>
     <div class="corners corners-right">
-      <button class="iconbtn" data-sound title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
-      <button class="iconbtn" data-orient title="Kunci orientasi" aria-label="Kunci orientasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
+      <button type="button" class="iconbtn" data-sound title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
+      <button type="button" class="iconbtn" data-orient title="Kunci orientasi" aria-label="Kunci orientasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
     </div>
     <div class="panel">
       <div class="menu-head"><img src="assets/logo-naruto-war-web.jpg?v=2" alt="NARUTO WAR"></div>
@@ -154,14 +154,14 @@
         <div class="splash-view">
           <img id="char-splash-img" class="splash-img" alt="Karakter terpilih">
           <div class="splash-namebar">
-            <button class="iconbtn arr" id="btn-char-prev" title="Karakter sebelumnya" aria-label="Karakter sebelumnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button>
+            <button type="button" class="iconbtn arr" id="btn-char-prev" title="Karakter sebelumnya" aria-label="Karakter sebelumnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button>
             <div class="splash-nametxt"><h3 id="char-splash-name">—</h3><p id="char-splash-title"></p></div>
-            <button class="iconbtn arr" id="btn-char-next" title="Karakter berikutnya" aria-label="Karakter berikutnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg></button>
+            <button type="button" class="iconbtn arr" id="btn-char-next" title="Karakter berikutnya" aria-label="Karakter berikutnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg></button>
           </div>
         </div>
       </div>
       <div class="row">
-        <button class="btn" id="btn-to-next" disabled>LANJUT</button>
+        <button type="button" class="btn" id="btn-to-next" disabled>LANJUT</button>
       </div>
     </div>
   </div>
@@ -169,11 +169,11 @@
   <!-- PILIH LAWAN -->
   <div id="screen-enemy" class="screen">
     <div class="corners corners-left">
-      <button class="iconbtn" id="btn-back-enemy" data-back title="Kembali" aria-label="Kembali"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button>
+      <button type="button" class="iconbtn" id="btn-back-enemy" data-back title="Kembali" aria-label="Kembali"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button>
     </div>
     <div class="corners corners-right">
-      <button class="iconbtn" data-sound title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
-      <button class="iconbtn" data-orient title="Kunci orientasi" aria-label="Kunci orientasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
+      <button type="button" class="iconbtn" data-sound title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
+      <button type="button" class="iconbtn" data-orient title="Kunci orientasi" aria-label="Kunci orientasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
     </div>
     <div class="panel">
       <div class="menu-head"><img src="assets/logo-naruto-war-web.jpg?v=2" alt="NARUTO WAR"></div>
@@ -184,14 +184,14 @@
         <div class="splash-view">
           <img id="enemy-splash-img" class="splash-img" alt="Lawan terpilih">
           <div class="splash-namebar">
-            <button class="iconbtn arr" id="btn-enemy-prev" title="Lawan sebelumnya" aria-label="Lawan sebelumnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button>
+            <button type="button" class="iconbtn arr" id="btn-enemy-prev" title="Lawan sebelumnya" aria-label="Lawan sebelumnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></button>
             <div class="splash-nametxt"><h3 id="enemy-splash-name">—</h3><p id="enemy-splash-title"></p></div>
-            <button class="iconbtn arr" id="btn-enemy-next" title="Lawan berikutnya" aria-label="Lawan berikutnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg></button>
+            <button type="button" class="iconbtn arr" id="btn-enemy-next" title="Lawan berikutnya" aria-label="Lawan berikutnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg></button>
           </div>
         </div>
       </div>
       <div class="row">
-        <button class="btn" id="btn-to-arena2" disabled>LANJUT: PILIH ARENA</button>
+        <button type="button" class="btn" id="btn-to-arena2" disabled>LANJUT: PILIH ARENA</button>
       </div>
     </div>
   </div>
@@ -239,24 +239,24 @@
       </div>
     </div>
     <div class="hud-btns">
-      <button id="btn-pause" class="iconbtn" title="Jeda (Esc)" aria-label="Jeda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5v14M15 5v14" stroke-width="3.6"/></svg></button>
-      <button id="btn-orient" class="iconbtn" data-orient title="Kunci orientasi" aria-label="Kunci orientasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
-      <button id="btn-fs" class="iconbtn" data-fs title="Layar penuh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></svg></button>
-      <button id="btn-sound" class="iconbtn" data-sound title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
-      <button id="btn-quit" class="iconbtn" title="Keluar" aria-label="Keluar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <button type="button" id="btn-pause" class="iconbtn" title="Jeda (Esc)" aria-label="Jeda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5v14M15 5v14" stroke-width="3.6"/></svg></button>
+      <button type="button" id="btn-orient" class="iconbtn" data-orient title="Kunci orientasi" aria-label="Kunci orientasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
+      <button type="button" id="btn-fs" class="iconbtn" data-fs title="Layar penuh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></svg></button>
+      <button type="button" id="btn-sound" class="iconbtn" data-sound title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
+      <button type="button" id="btn-quit" class="iconbtn" title="Keluar" aria-label="Keluar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
     <!-- KONTROL SENTUH: 1 joystick + ATTACK + 3 jutsu + ULTIMATE -->
     <div id="touch">
       <div id="stick"><div id="stick-knob"></div></div>
       <div id="skillbtns">
         <div class="btnrow">
-          <div class="skcell"><button class="skbtn" data-sk="0" id="sk0" title="Jutsu 1"><span class="cd"></span><span class="cdnum"></span><b>J1</b></button><span class="skname" id="skn0"></span></div>
-          <div class="skcell"><button class="skbtn" data-sk="1" id="sk1" title="Jutsu 2"><span class="cd"></span><span class="cdnum"></span><b>J2</b></button><span class="skname" id="skn1"></span></div>
-          <div class="skcell"><button class="skbtn" data-sk="2" id="sk2" title="Jutsu 3"><span class="cd"></span><span class="cdnum"></span><b>J3</b></button><span class="skname" id="skn2"></span></div>
-          <div class="skcell"><button class="skbtn ult" data-sk="3" id="sk3" title="Ultimate"><span class="cd"></span><span class="cdnum"></span><b>ULT</b></button><span class="skname ult" id="skn3"></span></div>
+          <div class="skcell"><button type="button" class="skbtn" data-sk="0" id="sk0" title="Jutsu 1"><span class="cd"></span><span class="cdnum"></span><b>J1</b></button><span class="skname" id="skn0"></span></div>
+          <div class="skcell"><button type="button" class="skbtn" data-sk="1" id="sk1" title="Jutsu 2"><span class="cd"></span><span class="cdnum"></span><b>J2</b></button><span class="skname" id="skn1"></span></div>
+          <div class="skcell"><button type="button" class="skbtn" data-sk="2" id="sk2" title="Jutsu 3"><span class="cd"></span><span class="cdnum"></span><b>J3</b></button><span class="skname" id="skn2"></span></div>
+          <div class="skcell"><button type="button" class="skbtn ult" data-sk="3" id="sk3" title="Ultimate"><span class="cd"></span><span class="cdnum"></span><b>ULT</b></button><span class="skname ult" id="skn3"></span></div>
         </div>
         <div class="btnrow">
-          <div class="skcell"><button class="skbtn atk" id="btn-atk" title="Serang"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.6 3.2c.9 0 1.6.7 1.6 1.6V6h.4V4.9c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6V6h.4V5.2c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6V9c.9.1 1.6.9 1.6 1.8v3.1c0 3.9-2.9 6.9-6.9 6.9-2.9 0-4.9-1.1-6.6-3.2l-2.1-2.6c-.7-.9-.5-2.1.4-2.7.8-.5 1.9-.3 2.5.5l1.7 2V4.8c0-.9.7-1.6 1.6-1.6zm.4 4.3v3.2h.4V6.4h-.4zm3.2 0v3.2h.4V6.4h-.4zm3.2.6v2.6h.4V7h-.4z"/></svg></button><span class="skname">Serang</span></div>
+          <div class="skcell"><button type="button" class="skbtn atk" id="btn-atk" title="Serang"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.6 3.2c.9 0 1.6.7 1.6 1.6V6h.4V4.9c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6V6h.4V5.2c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6V9c.9.1 1.6.9 1.6 1.8v3.1c0 3.9-2.9 6.9-6.9 6.9-2.9 0-4.9-1.1-6.6-3.2l-2.1-2.6c-.7-.9-.5-2.1.4-2.7.8-.5 1.9-.3 2.5.5l1.7 2V4.8c0-.9.7-1.6 1.6-1.6zm.4 4.3v3.2h.4V6.4h-.4zm3.2 0v3.2h.4V6.4h-.4zm3.2.6v2.6h.4V7h-.4z"/></svg></button><span class="skname">Serang</span></div>
         </div>
       </div>
     </div>
@@ -267,12 +267,12 @@
   <div id="pause-overlay">
     <div class="pause-panel" role="dialog" aria-label="Menu jeda">
       <h2>JEDA</h2>
-      <button class="pitem" id="btn-resume">Kembali Bertarung</button>
-      <button class="pitem" id="btn-restart">Mulai Ulang</button>
-      <button class="pitem" id="btn-pause-menu">Kembali ke Menu</button>
-      <div class="pitemrow"><span>MUSIK</span><button class="ptoggle" id="btn-bgm" aria-label="Musik on/off"><b>ON</b></button></div>
-      <div class="pitemrow"><span>SUARA</span><button class="ptoggle" id="btn-sfx" aria-label="Suara on/off"><b>ON</b></button></div>
-      <div class="pitemrow"><span>LAYAR PENUH</span><button class="iconbtn" data-fs title="Layar penuh" aria-label="Layar penuh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></svg></button></div>
+      <button type="button" class="pitem" id="btn-resume">Kembali Bertarung</button>
+      <button type="button" class="pitem" id="btn-restart">Mulai Ulang</button>
+      <button type="button" class="pitem" id="btn-pause-menu">Kembali ke Menu</button>
+      <div class="pitemrow"><span>MUSIK</span><button type="button" class="ptoggle" id="btn-bgm" aria-label="Musik on/off"><b>ON</b></button></div>
+      <div class="pitemrow"><span>SUARA</span><button type="button" class="ptoggle" id="btn-sfx" aria-label="Suara on/off"><b>ON</b></button></div>
+      <div class="pitemrow"><span>LAYAR PENUH</span><button type="button" class="iconbtn" data-fs title="Layar penuh" aria-label="Layar penuh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></svg></button></div>
     </div>
   </div>
 
@@ -283,8 +283,8 @@
       <p class="quit-q">Keluar dan kembali ke menu utama?</p>
       <div id="quit-scoreboard" class="scoreboard"></div>
       <div class="row">
-        <button class="btn" id="btn-quit-yes">YA</button>
-        <button class="btn ghost" id="btn-quit-no">TIDAK</button>
+        <button type="button" class="btn" id="btn-quit-yes">YA</button>
+        <button type="button" class="btn ghost" id="btn-quit-no">TIDAK</button>
       </div>
     </div>
   </div>
@@ -292,16 +292,16 @@
   <!-- LAYAR AKHIR -->
   <div id="screen-end" class="screen">
     <div class="corners corners-right">
-      <button class="iconbtn" data-sound title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
-      <button class="iconbtn" data-orient title="Kunci orientasi" aria-label="Kunci orientasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
+      <button type="button" class="iconbtn" data-sound title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
+      <button type="button" class="iconbtn" data-orient title="Kunci orientasi" aria-label="Kunci orientasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
     </div>
     <div class="title-box">
       <h1 id="end-title">MENANG!</h1>
       <p id="end-sub" class="subtitle"></p>
       <div id="end-scoreboard" class="scoreboard"></div>
       <div class="row">
-        <button class="btn" id="btn-rematch">MAIN LAGI</button>
-        <button class="btn ghost" id="btn-tomenu">MENU UTAMA</button>
+        <button type="button" class="btn" id="btn-rematch">MAIN LAGI</button>
+        <button type="button" class="btn ghost" id="btn-tomenu">MENU UTAMA</button>
       </div>
     </div>
   </div>
@@ -311,7 +311,7 @@
 <script src="js/sprite.js?v=2"></script>
 <script src="js/fighter.js?v=2"></script>
 <script src="js/game.js?v=14"></script>
-<script src="js/ui.js?v=18"></script>
+<script src="js/ui.js?v=19"></script>
 <script src="js/main.js?v=3"></script>
 </body>
 </html>

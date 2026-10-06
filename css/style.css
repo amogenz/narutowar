@@ -486,8 +486,8 @@ body.compactland .pause-panel .btn{margin-bottom:8px}
 .splash-namebar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:6px;
   padding:10px 8px;background:linear-gradient(transparent,rgba(0,0,0,.88) 55%)}
 .splash-nametxt{flex:1;min-width:0;text-align:center}
-.splash-nametxt h3{font-family:var(--font-d);font-size:clamp(18px,3.4vw,30px);color:#fff;letter-spacing:1px;
-  text-shadow:0 3px 0 rgba(0,0,0,.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.splash-nametxt h3{font-family:var(--font-d);font-size:clamp(16px,3vw,26px);color:#fff;letter-spacing:1px;
+  text-shadow:0 3px 0 rgba(0,0,0,.65);line-height:1.2;overflow-wrap:anywhere}
 .splash-nametxt p{color:var(--gold);font-size:clamp(10px,2vw,13px);font-weight:700;letter-spacing:1.5px;
   text-shadow:0 2px 3px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .iconbtn.arr{width:44px;height:44px;min-width:44px;border-radius:50%;flex:0 0 auto}

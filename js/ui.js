@@ -751,7 +751,11 @@ function bindUI(){
   onTap($('btn-back-mode'),()=>{NWAudio.click();show('screen-title');});
   onTap($('btn-to-char'),()=>{NWAudio.click();
     document.querySelector('#screen-select .coinbar')||insertCoinBar('screen-select');
-    updateCoinBar();show('screen-select');});
+    updateCoinBar();
+    /* default rapi: preview terisi art+nama karakter pertama yang terbuka
+       (hindari ikon gambar rusak + nama "—" sebelum ada pilihan) */
+    if(!pChar){const first=NWChars.find(c=>store.isOpen(c.id));if(first)selectPlayer(first);}
+    show('screen-select');});
   onTap($('btn-back-select'),()=>{NWAudio.click();show('screen-mode');});
   onTap($('btn-to-next'),()=>{NWAudio.click();
     if(mode==='versus'){revealedEnemy.clear();eChar=null;buildEnemyGrid();
