@@ -35,7 +35,27 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=18">
+<link rel="stylesheet" href="css/style.css?v=19">
+  <!-- v17 (worker B): gaya panel PENGATURAN — memakai komponen yang sama
+       dengan menu jeda (.pause-panel/.pitem/.pitemrow/.ptoggle) -->
+  <style>
+  #settings-overlay{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+    background:rgba(4,6,14,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    opacity:0;visibility:hidden;transition:opacity .22s ease,visibility .22s;
+    padding:calc(16px + var(--sat)) calc(16px + var(--sar)) calc(16px + var(--sab)) calc(16px + var(--sal))}
+  #settings-overlay.show{opacity:1;visibility:visible}
+  #settings-overlay.show .pause-panel{transform:none}
+  .set-info{text-align:left;margin:6px 0 12px;padding:12px 14px;background:rgba(0,0,0,.25);
+    border:1px solid rgba(255,255,255,.1);border-radius:12px;max-height:30dvh;overflow-y:auto;
+    touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .set-info h3{font-family:var(--font-d);color:var(--gold);letter-spacing:2px;
+    font-size:clamp(12px,2.8vw,15px);margin:10px 0 4px}
+  .set-info h3:first-child{margin-top:0}
+  .set-info p{color:#dfe6ff;font-size:clamp(12px,2.8vw,14px);line-height:1.55;margin:0}
+  #btn-settings{margin-top:12px}
+  #btn-settings svg{width:20px;height:20px;vertical-align:-4px;margin-right:8px}
+  .title-box .btn{display:block;margin-left:auto;margin-right:auto}
+  </style>
 </head>
 <body>
 <div id="wrap">
@@ -54,6 +74,9 @@
 
   <!-- SPLASH STUDIO -->
   <div id="screen-splash" class="screen">
+    <div class="corners corners-right">
+      <button type="button" class="iconbtn" data-fs title="Layar penuh" aria-label="Layar penuh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></svg></button>
+    </div>
     <div class="splash-box">
       <img src="assets/icon-lab-v2.jpg?v=3" class="splash-logo" alt="AMOGENZ LAB">
       <p class="splash-sub">A PRODUCTION BY</p>
@@ -68,11 +91,13 @@
     <div class="corners corners-right">
       <button type="button" id="btn-mute-title" class="iconbtn" data-sound title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
       <button type="button" id="btn-orient-title" class="iconbtn" data-orient title="Kunci orientasi" aria-label="Kunci orientasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 3v4.5h-4.5"/></svg></button>
+      <button type="button" class="iconbtn" data-fs title="Layar penuh" aria-label="Layar penuh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></svg></button>
     </div>
     <div class="title-box">
       <img src="assets/logo-naruto-war-web.jpg?v=2" class="main-logo" alt="NARUTO WAR">
       <p class="subtitle">Pertarungan ninja 2D di web — hancurkan tower &amp; base musuh!</p>
       <button type="button" class="btn big" id="btn-start">MULAI BERMAIN</button>
+      <button type="button" class="btn ghost" id="btn-settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.4 1z"/></svg>PENGATURAN</button>
       <p class="hint">Fan-made game terinspirasi Naruto Senki. Bukan produk resmi.</p>
     </div>
     <div class="title-footer">A PRODUCTION BY <b>AMOGENZ LAB</b></div>
@@ -245,19 +270,18 @@
       <button type="button" id="btn-sound" class="iconbtn" data-sound title="Suara" aria-label="Suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.6 5.4a9.2 9.2 0 0 1 0 13.2"/></svg></button>
       <button type="button" id="btn-quit" class="iconbtn" title="Keluar" aria-label="Keluar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
-    <!-- KONTROL SENTUH: 1 joystick + ATTACK + 3 jutsu + ULTIMATE -->
+    <!-- KONTROL SENTUH v17: joystick kiri + dock kanan ala Naruto Senki
+         (grid jutsu 2x2 di kiri + ATTACK besar di pojok kanan bawah) -->
     <div id="touch">
       <div id="stick"><div id="stick-knob"></div></div>
       <div id="skillbtns">
-        <div class="btnrow">
+        <div class="jutsu-grid">
           <div class="skcell"><button type="button" class="skbtn" data-sk="0" id="sk0" title="Jutsu 1"><span class="cd"></span><span class="cdnum"></span><b>J1</b></button><span class="skname" id="skn0"></span></div>
           <div class="skcell"><button type="button" class="skbtn" data-sk="1" id="sk1" title="Jutsu 2"><span class="cd"></span><span class="cdnum"></span><b>J2</b></button><span class="skname" id="skn1"></span></div>
           <div class="skcell"><button type="button" class="skbtn" data-sk="2" id="sk2" title="Jutsu 3"><span class="cd"></span><span class="cdnum"></span><b>J3</b></button><span class="skname" id="skn2"></span></div>
           <div class="skcell"><button type="button" class="skbtn ult" data-sk="3" id="sk3" title="Ultimate"><span class="cd"></span><span class="cdnum"></span><b>ULT</b></button><span class="skname ult" id="skn3"></span></div>
         </div>
-        <div class="btnrow">
-          <div class="skcell"><button type="button" class="skbtn atk" id="btn-atk" title="Serang"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.6 3.2c.9 0 1.6.7 1.6 1.6V6h.4V4.9c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6V6h.4V5.2c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6V9c.9.1 1.6.9 1.6 1.8v3.1c0 3.9-2.9 6.9-6.9 6.9-2.9 0-4.9-1.1-6.6-3.2l-2.1-2.6c-.7-.9-.5-2.1.4-2.7.8-.5 1.9-.3 2.5.5l1.7 2V4.8c0-.9.7-1.6 1.6-1.6zm.4 4.3v3.2h.4V6.4h-.4zm3.2 0v3.2h.4V6.4h-.4zm3.2.6v2.6h.4V7h-.4z"/></svg></button><span class="skname">Serang</span></div>
-        </div>
+        <div class="skcell atkcell"><button type="button" class="skbtn atk" id="btn-atk" title="Serang"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.6 3.2c.9 0 1.6.7 1.6 1.6V6h.4V4.9c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6V6h.4V5.2c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6V9c.9.1 1.6.9 1.6 1.8v3.1c0 3.9-2.9 6.9-6.9 6.9-2.9 0-4.9-1.1-6.6-3.2l-2.1-2.6c-.7-.9-.5-2.1.4-2.7.8-.5 1.9-.3 2.5.5l1.7 2V4.8c0-.9.7-1.6 1.6-1.6zm.4 4.3v3.2h.4V6.4h-.4zm3.2 0v3.2h.4V6.4h-.4zm3.2.6v2.6h.4V7h-.4z"/></svg></button><span class="skname">Serang</span></div>
       </div>
     </div>
     <div id="keyhelp">Gerak: WASD / Panah &nbsp;•&nbsp; Attack: Spasi &nbsp;•&nbsp; Jutsu: Z X C &nbsp;•&nbsp; Ult: U &nbsp;•&nbsp; Dash: ketuk 2&times; arah / Shift</div>
@@ -289,6 +313,22 @@
     </div>
   </div>
 
+  <!-- PANEL PENGATURAN (v17, worker B) -->
+  <div id="settings-overlay">
+    <div class="pause-panel" role="dialog" aria-label="Pengaturan">
+      <h2>PENGATURAN</h2>
+      <div class="pitemrow"><span>MUSIK</span><button type="button" class="ptoggle" id="btn-set-bgm" aria-label="Musik on/off"><b>ON</b></button></div>
+      <div class="pitemrow"><span>SUARA</span><button type="button" class="ptoggle" id="btn-set-sfx" aria-label="Suara on/off"><b>ON</b></button></div>
+      <div class="set-info">
+        <h3>TENTANG AMOGENZ</h3>
+        <p>AMOGENZ adalah komunitas anak muda &ldquo;Spirit of Youth &amp; Technology&rdquo; yang berdiri pada 19 Oktober 2021 di Pondok Pesantren Langitan, Mojokerto. Komunitas ini bergerak lewat 3 pilar: software development (pengembangan perangkat lunak), AI integration (integrasi kecerdasan buatan), dan eksperimen seni digital — menemani santri dan anak muda belajar programming, teknologi digital, dan pengembangan karakter, dengan nilai kebersamaan, kemandirian, dan pantang menyerah.</p>
+        <h3>TENTANG AMOGENZ LAB</h3>
+        <p>AMOGENZ LAB adalah lab kreatif AMOGENZ — divisi riset dan pengembangan yang bereksperimen membangun dunia virtual 3D, game, dan karya digital. Naruto War adalah salah satu game yang dibuat dan dipublikasikan oleh AMOGENZ LAB.</p>
+      </div>
+      <button type="button" class="pitem" id="btn-settings-close">Tutup</button>
+    </div>
+  </div>
+
   <!-- LAYAR AKHIR -->
   <div id="screen-end" class="screen">
     <div class="corners corners-right">
@@ -310,8 +350,8 @@
 <script src="js/data.js?v=7"></script>
 <script src="js/sprite.js?v=2"></script>
 <script src="js/fighter.js?v=2"></script>
-<script src="js/game.js?v=14"></script>
-<script src="js/ui.js?v=19"></script>
+<script src="js/game.js?v=16"></script>
+<script src="js/ui.js?v=21"></script>
 <script src="js/main.js?v=3"></script>
 </body>
 </html>
