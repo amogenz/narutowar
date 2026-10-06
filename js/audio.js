@@ -137,7 +137,7 @@ var S={
   _fileCheck(kind,cb){
     var c=this._fileCache;
     if(kind in c){ cb(c[kind]); return; }
-    var url='assets/music/'+kind+'.mp3?v=1';
+    var url='assets/music/'+kind+'.mp3?v=2';
     if(typeof fetch==='undefined'){ c[kind]=false; cb(false); return; }
     fetch(url,{method:'HEAD'}).then(function(r){ c[kind]=!!r.ok; cb(!!r.ok); })
       .catch(function(){ c[kind]=false; cb(false); });
@@ -151,7 +151,7 @@ var S={
     this._fileCheck(kind,function(ok){
       if(!m.playing||m.kind!==kind) return; /* keburu diganti */
       if(ok){
-        var el=new Audio('assets/music/'+kind+'.mp3?v=1');
+        var el=new Audio('assets/music/'+kind+'.mp3?v=2');
         el.loop=true; el.volume=(kind==='battle'?0.55:0.45);
         m.el=el;
         try{ var p=el.play(); if(p&&p.catch)p.catch(function(){}); }catch(e){}
@@ -189,7 +189,7 @@ var S={
       if(!self.ctx) return;
       if(ok){
         try{
-          var el=new Audio('assets/music/victory.mp3?v=1');
+          var el=new Audio('assets/music/victory.mp3?v=2');
           el.volume=0.5;
           var p=el.play(); if(p&&p.catch)p.catch(function(){});
         }catch(e){}

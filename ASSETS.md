@@ -293,6 +293,19 @@ nama persis di atas — tanpa ubah kode. Lihat `assets/music/README.md`.
 > **Hak cipta:** JANGAN menaruh OST Naruto / musik berhak cipta milik
 > orang lain di `assets/music/`.
 
+### File musik aktif (2026-10-06)
+
+| File | Sumber | Keterangan |
+|---|---|---|
+| `menu.mp3` (76KB, 25 dtk, mono 24kbps) | Dari Bos (`ReelAudio-67716_11_wm18.mp3`) | Musik layar menu — loop |
+| `battle.mp3` (76KB, 25 dtk, mono 24kbps) | Dari Bos (`ReelAudio-8690_10_9c8n.mp3`) | Musik pertarungan — loop |
+| `victory.mp3` | (belum ada) | Masih memakai jingle synth bawaan |
+
+- File asli (406KB, 128kbps) disimpan sebagai backup di `assets/music/_src/` (tidak ikut deploy).
+- Versi produksi dikompres ke 24kbps mono 22,05kHz agar lolos batas upload deploy (~96KB/file); kualitas asli tetap ada di backup.
+- **Catatan GitHub:** file MP3 biner TIDAK di-push ke repo (konektor hanya untuk raw text) — MP3 live di produksi + backup lokal. Bila repo di-clone, folder music hanya berisi README dan game otomatis memakai synth.
+- Cara ganti: timpa `menu.mp3`/`battle.mp3`/`victory.mp3` dengan file legal milik sendiri, naikkan `?v=` di `js/audio.js` (`mp3?v=2` → `v=3`), update `version.json`, deploy ulang.
+
 ## Thumbnail stage (`assets/stages/`)
 
 Komposit dari art arena yang sudah ada (`assets/world/*_sky.jpg`,
